@@ -4,8 +4,8 @@
   "private": true,
   "description": "AI-powered resume screening, matching & hiring intelligence.",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/build-css.cjs && next dev",
+    "build": "node scripts/build-css.cjs && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

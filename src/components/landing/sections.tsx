@@ -60,7 +60,7 @@ export function Hero() {
     <section className="mx-auto max-w-6xl px-4 pb-20 pt-16 text-center sm:px-6 sm:pt-24">
       <motion.div {...rise}>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:border-brand-500/30 dark:bg-brand-950/50 dark:text-brand-300">
-          <Sparkles className="h-3 w-3" /> Deterministic scoring · AI interpretation · Recruiter in control
+          <Sparkles className="h-3 w-3" /> Deterministic scoring · AI interpretation
         </span>
       </motion.div>
       <motion.h1

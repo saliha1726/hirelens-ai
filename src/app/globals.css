@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Custom global styles. Tailwind utilities are precompiled to
+   tw-generated.css (see scripts/build-css.cjs) — this file intentionally
+   contains only plain CSS so it needs no PostCSS plugin processing. */
 
 :root {
   --bg: 255 255 255;
@@ -46,19 +46,54 @@ body {
   background: transparent;
 }
 
-@layer utilities {
-  .glass {
-    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl;
-  }
-  .card-hover {
-    @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/5 dark:hover:shadow-black/30 hover:border-brand-300/60 dark:hover:border-brand-700/60;
-  }
-  .text-gradient {
-    @apply bg-gradient-to-r from-brand-600 via-violet-500 to-brand-500 bg-clip-text text-transparent;
-  }
-  .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950;
-  }
+/* Composite utility classes (kept out of Tailwind's @layer on purpose). */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.dark .glass {
+  background: rgba(2, 6, 23, 0.7);
+}
+
+.card-hover {
+  transition: all 300ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 15px -3px rgba(15, 23, 42, 0.05),
+    0 4px 6px -4px rgba(15, 23, 42, 0.05);
+}
+.dark .card-hover:hover {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.35),
+    0 4px 6px -4px rgba(0, 0, 0, 0.3);
+}
+.dark .card-hover {
+  border-color: rgb(59 107 246 / 0.35);
+}
+.card-hover:hover {
+  border-color: rgb(147, 180, 253 / 0.6);
+}
+.dark .card-hover:hover {
+  border-color: rgb(29, 62, 216 / 0.6);
+}
+
+.text-gradient {
+  background-image: linear-gradient(to right, #2551eb, #8b5cf6, #3b6bf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #3b6bf6;
+}
+.dark .focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px #020617, 0 0 0 4px #3b6bf6;
 }
 
 @media (prefers-reduced-motion: reduce) {
