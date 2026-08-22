@@ -20,14 +20,17 @@ import type {
 const STORAGE_KEY = "hirelens.workspace.v1";
 const SCHEMA_VERSION = 1;
 
+/** Stable shared empty state — must never be recreated (useSyncExternalStore). */
+const EMPTY_STATE: WorkspaceState = Object.freeze({
+  jobs: [],
+  candidates: [],
+  activity: [],
+});
+
 export interface WorkspaceState {
   jobs: JobRequirements[];
   candidates: Candidate[];
   activity: ActivityEntry[];
-}
-
-function emptyState(): WorkspaceState {
-  return { jobs: [], candidates: [], activity: [] };
 }
 
 let state: WorkspaceState | null = null;
@@ -36,7 +39,7 @@ let hydrated = false;
 
 export function getState(): WorkspaceState {
   if (!hydrated) hydrate();
-  return state ?? emptyState();
+  return state ?? EMPTY_STATE;
 }
 
 function hydrate() {
@@ -88,7 +91,14 @@ function subscribe(listener: () => void): () => void {
 
 /** React hook — re-renders whenever any part of the workspace changes. */
 export function useWorkspace(): WorkspaceState {
-  return useSyncExternalStore(subscribe, getState, emptyState);
+  return useSyncExternalStore(
+    subscribe,
+    getState,
+    /** Server snapshot: stable shared reference (required by React). */
+    function getServerState() {
+      return EMPTY_STATE;
+    },
+  );
 }
 
 /* ───────────────────────── Mutations ───────────────────────── */
@@ -222,7 +232,7 @@ export function getJob(id: string): JobRequirements | undefined {
 }
 
 export function resetWorkspace(demoData?: WorkspaceState) {
-  state = demoData ?? emptyState();
+  state = demoData ?? { jobs: [], candidates: [], activity: [] };
   emit();
 }
 
