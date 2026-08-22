@@ -4,7 +4,7 @@
 
 HireLens AI is a decision-support assistant for recruiters: upload resumes against a job description and get deterministic, explainable compatibility scores — enriched with AI-generated qualitative insights. **The recruiter always makes the final decision; HireLens never does.**
 
-> 🟢 Live: _(production URL appears here after deployment)_
+> 🟢 **Live:** [https://hirelens-ai-black.vercel.app](https://hirelens-ai-black.vercel.app)
 
 ---
 
@@ -28,7 +28,7 @@ HireLens AI is a decision-support assistant for recruiters: upload resumes again
 | AI | Google Gemini REST API (`gemini-2.5-flash`, server-side only) |
 | Document parsing | `unpdf` (PDF), `mammoth` (DOCX) |
 | Validation | Zod + custom file/magic-byte validation |
-| Tests | Vitest (35 unit/integration tests) |
+| Tests | Vitest (35+ unit/integration tests) |
 
 ## Getting started
 
