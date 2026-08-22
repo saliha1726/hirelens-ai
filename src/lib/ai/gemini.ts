@@ -10,8 +10,8 @@
  *   clearly report unavailability instead of breaking the product.
  */
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-const FALLBACK_MODELS = ["gemini-2.0-flash"];
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+const FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-3.5-flash"];
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const TIMEOUT_MS = 30_000;
 
