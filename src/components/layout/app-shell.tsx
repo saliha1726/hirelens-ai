@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,19 +10,27 @@ import {
   Users,
   Briefcase,
   GitCompareArrows,
+  BarChart3,
   Menu,
   X,
   Eye,
+  LogOut,
+  Settings,
+  User,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { useUser } from "@/lib/hooks/use-user";
+import { signOutAction } from "@/app/actions/auth";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/screen", label: "Screen Resumes", icon: ScanSearch },
-  { href: "/candidates", label: "Candidates", icon: Users },
+  { href: "/screen", label: "AI Screening", icon: ScanSearch },
   { href: "/jobs", label: "Jobs", icon: Briefcase },
+  { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/compare", label: "Compare", icon: GitCompareArrows },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 export function Logo({ compact = false }: { compact?: boolean }) {
@@ -72,6 +80,86 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
         );
       })}
     </nav>
+  );
+}
+
+function UserMenu() {
+  const { user, loading } = useUser();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  if (loading || !user) return null;
+
+  const name = user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User";
+  const email = user.email ?? "";
+  const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="focus-ring flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">
+          {initials}
+        </span>
+        <span className="hidden text-left text-sm font-medium text-slate-700 sm:block dark:text-slate-200">
+          {name}
+        </span>
+        <ChevronDown className="hidden h-3.5 w-3.5 text-slate-400 sm:block" />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+            transition={{ duration: 0.12 }}
+            className="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+              <p className="text-sm font-medium text-slate-900 dark:text-white">{name}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{email}</p>
+            </div>
+            <div className="p-1.5">
+              <Link
+                href="/settings"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <Settings className="h-4 w-4 text-slate-400" /> Settings
+              </Link>
+              <Link
+                href="/settings"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <User className="h-4 w-4 text-slate-400" /> Profile
+              </Link>
+            </div>
+            <div className="border-t border-slate-100 p-1.5 dark:border-slate-800">
+              <form action={signOutAction}>
+                <button
+                  type="submit"
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                >
+                  <LogOut className="h-4 w-4" /> Sign out
+                </button>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -159,6 +247,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Workspace synced
           </span>
           <ThemeToggle />
+          <UserMenu />
         </div>
       </header>
 
