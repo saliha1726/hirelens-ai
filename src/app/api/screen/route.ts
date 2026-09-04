@@ -54,6 +54,12 @@ export async function POST(req: Request) {
     );
   }
 
+  // ── Request size check ─────────────────────────────────────────
+  const contentLength = req.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > 60 * 1024 * 1024) {
+    return NextResponse.json({ error: "Request too large" }, { status: 413 });
+  }
+
   // ── Request shape ──────────────────────────────────────────────
   let form: FormData;
   try {
@@ -89,12 +95,18 @@ export async function POST(req: Request) {
     );
   }
 
-  // ── Job requirements ───────────────────────────────────────────
+  // ── Job requirements (validated) ───────────────────────────────
   let job: JobRequirements;
   try {
-    job = jobJson
-      ? (JSON.parse(jobJson) as JobRequirements)
-      : parseJobDescription(jdText);
+    if (jobJson) {
+      const parsed = JSON.parse(jobJson);
+      if (!parsed || typeof parsed !== "object" || !parsed.title) {
+        return NextResponse.json({ error: "Invalid job data" }, { status: 400 });
+      }
+      job = parsed as JobRequirements;
+    } else {
+      job = parseJobDescription(jdText);
+    }
   } catch {
     return NextResponse.json({ error: "Could not interpret the job description." }, { status: 400 });
   }
@@ -123,12 +135,8 @@ export async function POST(req: Request) {
         try {
           aiInsight = await generateCandidateInsight(resume, job, match);
         } catch (err) {
-          aiError =
-            err instanceof Error && err.name !== "AIError"
-              ? "AI summary temporarily unavailable"
-              : err instanceof Error
-                ? `AI summary unavailable: ${err.message.slice(0, 140)}`
-                : "AI summary unavailable";
+          // Never expose raw provider errors or API keys
+          aiError = "AI analysis temporarily unavailable";
         }
       }
 

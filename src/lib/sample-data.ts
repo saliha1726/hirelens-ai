@@ -4,7 +4,7 @@
  * Sample resumes & job descriptions are run through the REAL parsing +
  * scoring pipeline, so demo numbers are always consistent with what a real
  * upload would produce. No AI calls here — insights appear only for live
- * screenings when GEMINI_API_KEY is configured.
+ * screenings when MIMO_API_KEY is configured.
  */
 import type { Candidate, JobRequirements, WorkspaceData } from "@/lib/types";
 import { parseResume } from "@/lib/parsing/resume-parser";

@@ -179,6 +179,7 @@ export interface AIInsight {
 
 export type ScreeningStatus =
   | "new"
+  | "screening"
   | "shortlisted"
   | "interview"
   | "rejected"

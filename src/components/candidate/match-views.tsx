@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 const STATUS_TONES: Record<ScreeningStatus, { tone: Parameters<typeof Badge>[0]["tone"]; label: string }> = {
   new: { tone: "neutral", label: "New" },
+  screening: { tone: "brand", label: "Screening" },
   shortlisted: { tone: "brand", label: "Shortlisted" },
   interview: { tone: "warning", label: "Interview" },
   rejected: { tone: "danger", label: "Rejected" },

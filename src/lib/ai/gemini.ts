@@ -1,22 +1,35 @@
 /**
- * Server-side Google Gemini client.
+ * Server-side AI client for recruitment insights.
  *
- * - API key NEVER leaves the server (no "use client", no NEXT_PUBLIC_).
- * - Resume/JD content is passed as delimited, untrusted DATA. The model is
- *   instructed to ignore any instructions inside it — and because scores are
- *   computed deterministically before this layer runs, injected text cannot
- *   move numbers even if it influences prose.
- * - Graceful degradation: callers must handle failure; features that need AI
- *   clearly report unavailability instead of breaking the product.
+ * Provider: MiMo (OpenAI-compatible /chat/completions API).
+ * API key NEVER leaves the server.
+ * Resume/JD content is passed as delimited, untrusted DATA.
+ * Graceful degradation: callers handle failure; features clearly
+ * report unavailability instead of breaking the product.
  */
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
-const FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-3.5-flash"];
-const BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const DEFAULT_MODEL = process.env.MIMO_MODEL || "mimo";
+const FALLBACK_MODELS = (process.env.MIMO_FALLBACK_MODELS || "").split(",").filter(Boolean);
+const BASE_URL = process.env.MIMO_BASE_URL || "https://api.mimo.ai/v1";
 const TIMEOUT_MS = 30_000;
+const MAX_RETRIES = 2;
+
+export type AIProvider = "mimo";
 
 export function isAIEnabled(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY);
+  return Boolean(process.env.MIMO_API_KEY);
+}
+
+export function getAIProvider(): AIProvider | null {
+  return isAIEnabled() ? "mimo" : null;
+}
+
+function getApiKey(): string | undefined {
+  return process.env.MIMO_API_KEY;
+}
+
+function getBaseUrl(): string {
+  return process.env.MIMO_BASE_URL || "https://api.mimo.ai/v1";
 }
 
 export class AIError extends Error {
@@ -28,54 +41,63 @@ export class AIError extends Error {
   }
 }
 
-interface GeminiCandidate {
-  content?: { parts?: Array<{ text?: string }> };
-  finishReason?: string;
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
 }
 
-interface GeminiResponse {
-  candidates?: GeminiCandidate[];
+interface MiMoResponse {
+  choices?: Array<{
+    message?: { content?: string };
+    finish_reason?: string;
+  }>;
   error?: { message?: string; code?: number };
-  promptFeedback?: { blockReason?: string };
 }
 
 async function callModel(
   model: string,
   apiKey: string,
-  body: Record<string, unknown>,
+  messages: ChatMessage[],
 ): Promise<string> {
+  const baseUrl = getBaseUrl();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${BASE_URL}/${model}:generateContent?key=${apiKey}`, {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.25,
+        max_tokens: 2048,
+        response_format: { type: "json_object" },
+      }),
       signal: controller.signal,
     });
 
     if (!res.ok) {
       let detail = "";
       try {
-        const errJson = (await res.json()) as GeminiResponse;
+        const errJson = (await res.json()) as MiMoResponse;
         detail = errJson.error?.message ?? "";
       } catch {
         /* non-JSON error body */
       }
       throw new AIError(
-        `Gemini request failed (${res.status})${detail ? `: ${truncate(detail)}` : ""}`,
+        `AI request failed (${res.status})${detail ? `: ${truncate(detail)}` : ""}`,
         res.status,
       );
     }
 
-    const json = (await res.json()) as GeminiResponse;
-    const text = json.candidates?.[0]?.content?.parts
-      ?.map((p) => p.text ?? "")
-      .join("")
-      .trim();
+    const json = (await res.json()) as MiMoResponse;
+    const text = json.choices?.[0]?.message?.content?.trim();
 
     if (!text) {
-      const reason = json.promptFeedback?.blockReason ?? json.candidates?.[0]?.finishReason;
+      const reason = json.choices?.[0]?.finish_reason;
       throw new AIError(`Empty AI response${reason ? ` (${reason})` : ""}`);
     }
     return text;
@@ -94,7 +116,6 @@ export function extractJSON<T>(raw: string): T {
   try {
     return JSON.parse(cleaned) as T;
   } catch {
-    // Last resort: first {...} or [...] block.
     const match = cleaned.match(/[[{][\s\S]*[\]}]/);
     if (match) {
       try {
@@ -113,29 +134,25 @@ export async function generateStructured<T>(params: {
   temperature?: number;
   maxTokens?: number;
 }): Promise<{ data: T; modelUsed: string }> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new AIError("GEMINI_API_KEY is not configured");
+  const apiKey = getApiKey();
+  if (!apiKey) throw new AIError("AI API key is not configured");
 
   const models = [DEFAULT_MODEL, ...FALLBACK_MODELS.filter((m) => m !== DEFAULT_MODEL)];
   let lastError: unknown;
 
+  const messages: ChatMessage[] = [
+    { role: "system", content: params.systemInstruction },
+    { role: "user", content: params.userContent },
+  ];
+
   for (const model of models) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const raw = await callModel(model, apiKey, {
-          systemInstruction: { parts: [{ text: params.systemInstruction }] },
-          contents: [{ role: "user", parts: [{ text: params.userContent }] }],
-          generationConfig: {
-            temperature: params.temperature ?? 0.2,
-            maxOutputTokens: params.maxTokens ?? 2048,
-            responseMimeType: "application/json",
-          },
-        });
+        const raw = await callModel(model, apiKey, messages);
         return { data: extractJSON<T>(raw), modelUsed: model };
       } catch (err) {
         lastError = err;
         const status = err instanceof AIError ? err.status : undefined;
-        // Retry once on rate-limit/server errors, then move to fallback model.
         if (!(status === 429 || (status != null && status >= 500))) break;
         await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
       }

@@ -207,7 +207,7 @@ export function deleteNote(candidateId: string, noteId: string) {
   emit();
 }
 
-const STATUSES: ScreeningStatus[] = ["new", "shortlisted", "interview", "rejected", "hired"];
+const STATUSES: ScreeningStatus[] = ["new", "screening", "shortlisted", "interview", "rejected", "hired"];
 export const ALL_STATUSES = STATUSES;
 
 export function setStatus(candidateId: string, status: ScreeningStatus) {

@@ -6,15 +6,13 @@
  *   runs. The AI is only asked to interpret the already-computed result.
  * - Resume content is embedded as delimited untrusted DATA with explicit
  *   instructions to ignore instructions inside it (prompt-injection defense).
- * - Protected characteristics are explicitly excluded: the model must not
- *   reference, infer, or score on race, religion, gender, orientation,
- *   disability/health, age, or political affiliation — and personal data
- *   (name/contact) is stripped before it reaches the model.
+ * - Protected characteristics are explicitly excluded.
+ * - Personal data (name/contact) is stripped before reaching the model.
  */
 import type { AIInsight, JobRequirements, MatchResult, ParsedResume } from "@/lib/types";
 import { generateStructured } from "@/lib/ai/gemini";
 
-const SYSTEM_INSTRUCTION = `You are an expert technical recruiter assistant for HireLens AI. You receive structured data extracted from a candidate resume and a job description, plus a deterministic compatibility analysis that was computed by rule-based code.
+const SYSTEM_INSTRUCTION = `You are an expert technical recruiter assistant for HireLens AI. You receive structured data extracted from a candidate resume and a job description, plus a deterministic compatibility analysis computed by rule-based code.
 
 Your ONLY task is to write a short professional interpretation of the ALREADY-COMPUTED analysis. You never compute or change scores.
 
@@ -24,7 +22,11 @@ STRICT RULES:
 3. NEVER reference, infer, or evaluate protected characteristics: race, ethnicity, religion, gender, sexual orientation, age/birthdate, disability, medical conditions, pregnancy/family status, or political affiliation. If the resume contains such information, ignore it entirely and do not mention it.
 4. Do not include names, emails, phone numbers, or addresses in your output. Refer to "the candidate".
 5. Be balanced: mention genuine strengths AND genuine gaps relative to the job requirements.
-6. Keep every string concise and factual. Write in clear professional English.`;
+6. Keep every string concise and factual. Write in clear professional English.
+7. For the summary, provide a 2-3 sentence professional interpretation.
+8. For strengths, focus on the 2-3 most relevant positive signals.
+9. For concerns, focus on the 2-3 most important gaps or risks.
+10. For interviewFocus, suggest 2-3 specific areas to probe in an interview.`;
 
 interface InsightShape {
   summary: string;
@@ -35,8 +37,6 @@ interface InsightShape {
 }
 
 function sanitizeResumeForAI(resume: ParsedResume): object {
-  // Strip direct identifiers & any free-text fields that could carry injected
-  // prose beyond bounded highlights; send structured facts only.
   const { name: _n, email: _e, phone: _p, location: _l, summary: _s, ...rest } = resume;
   return {
     ...rest,
@@ -45,7 +45,6 @@ function sanitizeResumeForAI(resume: ParsedResume): object {
       company: e.company ?? "",
       durationMonths: e.durationMonths,
       current: Boolean(e.current),
-      // Highlights are capped & length-limited; still untrusted → see system rules.
       highlights: (e.highlights ?? []).map((h) => h.slice(0, 200)).slice(0, 3),
     })),
     education: resume.education.map((e) => ({ level: e.level, field: e.field ?? "", graduationYear: e.graduationYear })),
