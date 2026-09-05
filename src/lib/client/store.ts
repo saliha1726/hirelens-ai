@@ -171,6 +171,7 @@ function subscribeToFirestore() {
           resume: (data.resume as Candidate["resume"]) ?? { skills: [], experience: [], education: [], certifications: [], domains: [], rawTextLength: 0, confidence: 0, parseWarnings: [] },
           screenings: (data.screenings as ScreeningRecord[]) ?? [],
           notes: (data.notes as RecruiterNote[]) ?? [],
+          interviews: (data.interviews as Candidate["interviews"]) ?? [],
           status: (data.status as ScreeningStatus) ?? "new",
           createdAt: (data.createdAt as string) ?? new Date().toISOString(),
         };
@@ -279,6 +280,7 @@ async function writeCandidate(candidate: Candidate) {
       resume: candidate.resume,
       screenings: candidate.screenings,
       notes: candidate.notes,
+      interviews: candidate.interviews,
       status: candidate.status,
       createdAt: candidate.createdAt,
     });
@@ -458,6 +460,16 @@ export function getJob(id: string): JobRequirements | undefined {
   return getState().jobs.find((j) => j.id === id);
 }
 
+export function updateCandidate(updated: Candidate) {
+  const s = getState();
+  state = {
+    ...s,
+    candidates: s.candidates.map((c) => (c.id === updated.id ? updated : c)),
+  };
+  emit();
+  writeCandidate(updated);
+}
+
 export async function resetWorkspace(demoData?: WorkspaceState) {
   state = demoData ?? { jobs: [], candidates: [], activity: [] };
   emit();
@@ -513,6 +525,7 @@ export function importScreeningResult(payload: {
       fileName: r.fileName,
       resume: r.resume,
       notes: [],
+      interviews: [],
       status: "new",
       createdAt: now,
       screenings: [

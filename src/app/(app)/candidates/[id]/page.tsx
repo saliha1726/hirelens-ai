@@ -28,6 +28,8 @@ import {
   StatusBadge,
 } from "@/components/candidate/match-views";
 import { cn, formatDate, initialsOf, timeAgo } from "@/lib/utils";
+import { exportCandidatePDF } from "@/lib/export-pdf";
+import { InterviewScheduler } from "@/components/candidate/interview-scheduler";
 
 export default function CandidateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -94,6 +96,9 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
+            <Button variant="outline" size="md" onClick={() => exportCandidatePDF(candidate, ws.jobs)}>
+              <FileText className="h-4 w-4" />
+            </Button>
             <Button variant="outline" size="md" onClick={() => window.print()}>
               <Printer className="h-4 w-4" />
             </Button>
@@ -205,6 +210,7 @@ function CandidateBody({ candidateId, screenings }: { candidateId: string; scree
 
         {/* Side column */}
         <div className="space-y-5">
+          <InterviewScheduler candidate={candidate} />
           <ProfileSection resume={r} />
         </div>
       </div>

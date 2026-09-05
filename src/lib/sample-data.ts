@@ -374,6 +374,7 @@ export function buildDemoWorkspace(): WorkspaceData {
               },
             ]
           : [],
+      interviews: [],
       status: ri === 0 ? "shortlisted" : ri === 3 ? "interview" : "new",
       createdAt: new Date(baseTime + ri * 36e5).toISOString(),
     });

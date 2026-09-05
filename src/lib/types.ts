@@ -192,6 +192,15 @@ export interface RecruiterNote {
   createdAt: string;
 }
 
+export interface Interview {
+  id: string;
+  scheduledAt: string;
+  duration: number; // minutes
+  type: "phone" | "video" | "onsite" | "technical";
+  notes?: string;
+  createdAt: string;
+}
+
 /** One candidate = parsed resume + screening results against jobs. */
 export interface Candidate {
   id: string;
@@ -199,6 +208,7 @@ export interface Candidate {
   resume: ParsedResume;
   screenings: ScreeningRecord[];
   notes: RecruiterNote[];
+  interviews: Interview[];
   status: ScreeningStatus;
   createdAt: string;
 }

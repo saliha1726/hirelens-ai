@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { CommandPalette } from "@/components/ui/command-palette";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { useUser } from "@/lib/hooks/use-user";
 import { signOut } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/config";
@@ -261,7 +263,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="px-4 pb-16 pt-6 sm:px-6 lg:pl-[17.5rem] lg:pr-8">
+      <main className="px-4 pb-24 pt-6 sm:px-6 sm:pb-16 lg:pl-[17.5rem] lg:pr-8">
         <motion.div
           key={pathname}
           initial={{ opacity: 0, y: 6 }}
@@ -271,6 +273,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </motion.div>
       </main>
+      <CommandPalette />
+      <MobileBottomNav />
     </div>
   );
 }
