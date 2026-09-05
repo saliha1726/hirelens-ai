@@ -2,14 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Users, GitCompareArrows } from "lucide-react";
+import { Search, Users, GitCompareArrows, Download } from "lucide-react";
 import type { ScreeningStatus } from "@/lib/types";
 import { useWorkspace } from "@/lib/client/store";
 import { ALL_STATUSES } from "@/lib/client/store";
-import { ButtonLink, Card, EmptyState } from "@/components/ui/primitives";
+import { Button, ButtonLink, Card, EmptyState } from "@/components/ui/primitives";
 import { CandidateRow } from "@/components/candidate/candidate-card";
 import { DemoDataManager } from "@/components/workspace/demo-banner";
 import { cn } from "@/lib/utils";
+import { exportCandidatesToCSV } from "@/lib/export-csv";
 
 type SortKey = "score" | "name" | "recent" | "experience";
 
@@ -85,6 +86,11 @@ export default function CandidatesPage() {
           <ButtonLink href={`/compare?a=${selected[0]}&b=${selected[1]}`}>
             <GitCompareArrows className="h-4 w-4" /> Compare ({selected.length})
           </ButtonLink>
+        )}
+        {ws.candidates.length > 0 && (
+          <Button variant="outline" size="sm" onClick={() => exportCandidatesToCSV(ws.candidates)}>
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
         )}
       </div>
 
