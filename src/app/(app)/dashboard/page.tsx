@@ -10,6 +10,16 @@ import { ScoreRing } from "@/components/ui/score-ring";
 import { CandidateRow } from "@/components/candidate/candidate-card";
 import { DemoDataManager } from "@/components/workspace/demo-banner";
 import { timeAgo } from "@/lib/utils";
+import { StaggerContainer, StaggerItem } from "@/components/ui/animations";
+
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+};
 
 export default function DashboardPage() {
   const ws = useWorkspace();
@@ -74,12 +84,12 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* Stat cards */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard icon={Users} label="Total candidates" value={stats.candidates} delay={0} />
-            <StatCard icon={Briefcase} label="Jobs analyzed" value={stats.jobs} delay={0.06} />
-            <StatCard icon={Gauge} label="Average match" value={stats.avg} suffix="%" delay={0.12} />
-            <StatCard icon={Activity} label="In pipeline" value={stats.shortlisted} hint="shortlisted / interview" delay={0.18} />
-          </div>
+          <StaggerContainer className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StaggerItem><StatCard icon={Users} label="Total candidates" value={stats.candidates} /></StaggerItem>
+            <StaggerItem><StatCard icon={Briefcase} label="Jobs analyzed" value={stats.jobs} /></StaggerItem>
+            <StaggerItem><StatCard icon={Gauge} label="Average match" value={stats.avg} suffix="%" /></StaggerItem>
+            <StaggerItem><StatCard icon={Activity} label="In pipeline" value={stats.shortlisted} hint="shortlisted / interview" /></StaggerItem>
+          </StaggerContainer>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-3">
             {/* Top candidates */}
@@ -188,49 +198,40 @@ function StatCard({
   value,
   suffix,
   hint,
-  delay,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
   suffix?: string;
   hint?: string;
-  delay: number;
 }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
     let raf: number;
-    const t = setTimeout(() => {
-      const start = performance.now();
-      const dur = 900;
-      const tick = (now: number) => {
-        const p = Math.min(1, (now - start) / dur);
-        setDisplay(Math.round((1 - Math.pow(1 - p, 3)) * value));
-        if (p < 1) raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    }, 120 + delay * 1000);
-    return () => {
-      clearTimeout(t);
-      cancelAnimationFrame(raf ?? 0);
+    const start = performance.now();
+    const dur = 900;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      setDisplay(Math.round((1 - Math.pow(1 - p, 3)) * value));
+      if (p < 1) raf = requestAnimationFrame(tick);
     };
-  }, [value, delay]);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-      <Card className="card-hover p-5">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/60 dark:text-brand-400">
-            <Icon className="h-4 w-4" />
-          </span>
-        </div>
-        <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight">
-          {display}
-          {suffix}
-        </p>
-        {hint && <p className="text-xs text-slate-400">{hint}</p>}
-      </Card>
-    </motion.div>
+    <Card className="card-hover glow-hover p-5">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/60 dark:text-brand-400">
+          <Icon className="h-4 w-4" />
+        </span>
+      </div>
+      <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight">
+        {display}
+        {suffix}
+      </p>
+      {hint && <p className="text-xs text-slate-400">{hint}</p>}
+    </Card>
   );
 }

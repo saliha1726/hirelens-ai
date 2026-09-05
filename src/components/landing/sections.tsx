@@ -29,6 +29,16 @@ export function BackgroundGlow() {
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
       <div className="absolute -top-40 left-1/2 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-r from-brand-400/20 via-violet-400/15 to-brand-300/20 blur-3xl dark:from-brand-600/15 dark:via-violet-600/10 dark:to-brand-500/15" />
       <div className="absolute right-[-200px] top-[45%] h-[400px] w-[400px] rounded-full bg-emerald-300/10 blur-3xl dark:bg-emerald-500/5" />
+      <motion.div
+        className="absolute left-[-100px] top-[30%] h-[300px] w-[300px] rounded-full bg-violet-300/10 blur-3xl dark:bg-violet-500/5"
+        animate={{ y: [0, -30, 0, 20, 0], x: [0, 15, -10, 5, 0], scale: [1, 1.05, 0.97, 1.03, 1] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute bottom-[10%] left-[20%] h-[250px] w-[250px] rounded-full bg-brand-300/8 blur-3xl dark:bg-brand-500/5"
+        animate={{ y: [0, 20, -15, 10, 0], x: [0, -10, 8, -5, 0] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+      />
     </div>
   );
 }
@@ -69,7 +79,7 @@ export function Hero() {
         className="mx-auto mt-6 max-w-4xl text-balance text-4xl font-bold leading-tight tracking-tight sm:text-6xl"
       >
         Screen 100 resumes.{" "}
-        <span className="text-gradient">Understand every score.</span>
+        <span className="text-gradient-animated">Understand every score.</span>
       </motion.h1>
       <motion.p
         {...rise}
@@ -85,12 +95,25 @@ export function Hero() {
         transition={{ delay: 0.24 }}
         className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
       >
-        <ButtonLink href="/screen" size="lg">
-          Start screening free <ArrowRight className="ml-1 h-4 w-4" />
-        </ButtonLink>
-        <ButtonLink href="/dashboard" size="lg" variant="outline">
-          See live demo data
-        </ButtonLink>
+        <motion.div
+          whileHover={{ scale: 1.04, boxShadow: "0 0 40px rgba(59, 107, 246, 0.35)" }}
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+          className="animate-pulse-glow rounded-xl"
+        >
+          <ButtonLink href="/screen" size="lg">
+            Start screening free <ArrowRight className="ml-1 h-4 w-4" />
+          </ButtonLink>
+        </motion.div>
+        <motion.div
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+        >
+          <ButtonLink href="/dashboard" size="lg" variant="outline">
+            See live demo data
+          </ButtonLink>
+        </motion.div>
       </motion.div>
 
       {/* Hero product mock */}

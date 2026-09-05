@@ -11,6 +11,7 @@ import { CandidateRow } from "@/components/candidate/candidate-card";
 import { DemoDataManager } from "@/components/workspace/demo-banner";
 import { cn } from "@/lib/utils";
 import { exportCandidatesToCSV } from "@/lib/export-csv";
+import { StaggerContainer, StaggerItem } from "@/components/ui/animations";
 
 type SortKey = "score" | "name" | "recent" | "experience";
 
@@ -160,9 +161,9 @@ export default function CandidatesPage() {
           action={!ws.candidates.length && <ButtonLink href="/screen">Run a screening</ButtonLink>}
         />
       ) : (
-        <div className="space-y-3">
+        <StaggerContainer className="space-y-3">
           {rows.map(({ candidate, best, jobMatch }, i) => (
-            <div key={candidate.id} className="relative">
+            <StaggerItem key={candidate.id} className="relative">
               <CandidateRow
                 candidate={candidate}
                 screening={jobMatch ?? best ?? undefined}
@@ -178,9 +179,9 @@ export default function CandidatesPage() {
                 />
                 compare
               </label>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerContainer>
       )}
     </div>
   );

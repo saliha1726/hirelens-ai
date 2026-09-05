@@ -23,7 +23,7 @@ export function CandidateRow({
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
       <Link
         href={`/candidates/${candidate.id}`}
-        className="focus-ring group block rounded-2xl border border-slate-200/80 bg-white p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-300/70 hover:shadow-lg hover:shadow-brand-600/5 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-500/40"
+        className="focus-ring group block rounded-2xl border border-slate-200/80 bg-white p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-300/70 hover:shadow-lg hover:shadow-brand-600/5 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-500/40 glow-hover"
       >
         <div className="flex items-center gap-4">
           {rank != null && (

@@ -37,6 +37,13 @@ const NAV = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
+const pageTransition = {
+  initial: { opacity: 0, y: 8, filter: "blur(4px)" },
+  animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+  exit: { opacity: 0, y: -6, filter: "blur(4px)" },
+  transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] },
+};
+
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <Link href="/" className="focus-ring group flex items-center gap-2.5 rounded-lg" aria-label="HireLens AI home">
@@ -261,7 +268,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="px-4 pb-16 pt-6 sm:px-6 lg:pl-[17.5rem] lg:pr-8">{children}</main>
+      <main className="px-4 pb-16 pt-6 sm:px-6 lg:pl-[17.5rem] lg:pr-8">
+        <AnimatePresence mode="wait">
+          <motion.div key={pathname} {...pageTransition}>
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 }
