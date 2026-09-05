@@ -1,44 +1,32 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import type { AuthChangeEvent, Session, SupabaseClient, User } from "@supabase/supabase-js";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
+import type { User } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase/config";
 
 export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabaseRef = useRef<SupabaseClient | null>(null);
 
   useEffect(() => {
     let disposed = false;
 
     try {
-      supabaseRef.current = getSupabaseBrowserClient();
+      const auth = getFirebaseAuth();
+      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        if (disposed) return;
+        setUser(firebaseUser);
+        setLoading(false);
+      });
+      return () => {
+        disposed = true;
+        unsubscribe();
+      };
     } catch {
       setLoading(false);
       return;
     }
-
-    const supabase = supabaseRef.current;
-    if (!supabase) { setLoading(false); return; }
-
-    supabase.auth.getUser().then((result: { data: { user: User | null } }) => {
-      if (disposed) return;
-      setUser(result.data.user);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      if (disposed) return;
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      disposed = true;
-      subscription.unsubscribe();
-    };
   }, []);
 
   return { user, loading };

@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the requesting user owns the workspace
+    function isOwner(workspaceId) {
+      return exists(/databases/$(database)/documents/workspaces/$(workspaceId))
+        && get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.owner_id == request.auth.uid;
+    }
+
+    // ── Profiles ────────────────────────────────────────
+    match /profiles/{uid} {
+      allow read, update: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── Workspaces ──────────────────────────────────────
+    match /workspaces/{wsId} {
+      allow read, update, delete: if request.auth != null && resource.data.owner_id == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.owner_id == request.auth.uid;
+    }
+
+    // ── Jobs ────────────────────────────────────────────
+    match /jobs/{jobId} {
+      allow read, create, update, delete: if request.auth != null
+        && isOwner(request.resource.data.workspace_id || resource.data.workspace_id);
+    }
+
+    // ── Candidates ──────────────────────────────────────
+    match /candidates/{candidateId} {
+      allow read, create, update, delete: if request.auth != null
+        && isOwner(request.resource.data.workspace_id || resource.data.workspace_id);
+    }
+
+    // ── Screening Results ───────────────────────────────
+    match /screening_results/{resultId} {
+      allow read, create: if request.auth != null
+        && isOwner(request.resource.data.workspace_id || resource.data.workspace_id);
+    }
+
+    // ── Candidate Notes ─────────────────────────────────
+    match /candidate_notes/{noteId} {
+      allow read, create, delete: if request.auth != null
+        && isOwner(request.resource.data.workspace_id || resource.data.workspace_id);
+    }
+
+    // ── Candidate Activity ──────────────────────────────
+    match /candidate_activity/{activityId} {
+      allow read, create: if request.auth != null
+        && isOwner(request.resource.data.workspace_id || resource.data.workspace_id);
+    }
+  }
+}

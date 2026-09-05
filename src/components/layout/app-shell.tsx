@@ -22,7 +22,9 @@ import {
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useUser } from "@/lib/hooks/use-user";
-import { signOutAction } from "@/app/actions/auth";
+import { signOut } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase/config";
+import { useRouter } from "next/navigation";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -87,6 +89,7 @@ function UserMenu() {
   const { user, loading } = useUser();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -98,9 +101,16 @@ function UserMenu() {
 
   if (loading || !user) return null;
 
-  const name = user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User";
+  const name = user.displayName ?? user.email?.split("@")[0] ?? "User";
   const email = user.email ?? "";
   const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+
+  async function handleSignOut() {
+    const auth = getFirebaseAuth();
+    await signOut(auth);
+    await fetch("/api/auth/session", { method: "DELETE" });
+    router.push("/login");
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -147,14 +157,12 @@ function UserMenu() {
               </Link>
             </div>
             <div className="border-t border-slate-100 p-1.5 dark:border-slate-800">
-              <form action={signOutAction}>
-                <button
-                  type="submit"
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
-                >
-                  <LogOut className="h-4 w-4" /> Sign out
-                </button>
-              </form>
+              <button
+                onClick={handleSignOut}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+              >
+                <LogOut className="h-4 w-4" /> Sign out
+              </button>
             </div>
           </motion.div>
         )}
