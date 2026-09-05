@@ -3,11 +3,24 @@
 /**
  * Client-side workspace store.
  *
- * v1 persistence: versioned localStorage per browser ("personal workspace").
- * The interface is deliberately shaped like a repository layer so a server
- * database can replace it later without touching UI code.
+ * Persistence: Firestore per-user workspace (Firestore free tier).
+ * All mutations write to Firestore AND update in-memory state optimistically.
+ * Real-time listeners keep multi-tab and cross-device state in sync.
+ *
+ * The public API is unchanged — no consuming component needs modification.
  */
 import { useSyncExternalStore } from "react";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  setDoc,
+  deleteDoc,
+  writeBatch,
+  query,
+  orderBy,
+} from "firebase/firestore";
+import { getFirebaseDb, getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/config";
 import type {
   ActivityEntry,
   Candidate,
@@ -16,9 +29,6 @@ import type {
   ScreeningRecord,
   ScreeningStatus,
 } from "@/lib/types";
-
-const STORAGE_KEY = "hirelens.workspace.v1";
-const SCHEMA_VERSION = 1;
 
 /** Stable shared empty state — must never be recreated (useSyncExternalStore). */
 const EMPTY_STATE: WorkspaceState = Object.freeze({
@@ -36,6 +46,40 @@ export interface WorkspaceState {
 let state: WorkspaceState | null = null;
 const listeners = new Set<() => void>();
 let hydrated = false;
+let unsubscribers: (() => void)[] = [];
+let firestoreReady = false;
+
+/* ───────────────────────── Firestore helpers ───────────────────────── */
+
+function getUid(): string | null {
+  if (!isFirebaseConfigured()) return null;
+  try {
+    const user = getFirebaseAuth().currentUser;
+    return user?.uid ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function jobsCol() {
+  const uid = getUid();
+  if (!uid) return null;
+  return collection(getFirebaseDb(), `workspaces/${uid}/jobs`);
+}
+
+function candidatesCol() {
+  const uid = getUid();
+  if (!uid) return null;
+  return collection(getFirebaseDb(), `workspaces/${uid}/candidates`);
+}
+
+function activityCol() {
+  const uid = getUid();
+  if (!uid) return null;
+  return collection(getFirebaseDb(), `workspaces/${uid}/activity`);
+}
+
+/* ───────────────────────── State management ───────────────────────── */
 
 export function getState(): WorkspaceState {
   if (!hydrated) hydrate();
@@ -43,50 +87,137 @@ export function getState(): WorkspaceState {
 }
 
 function hydrate() {
+  if (hydrated) return;
   if (typeof window === "undefined") return;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as WorkspaceState & { version?: number };
-      if (parsed.version === SCHEMA_VERSION && Array.isArray(parsed.candidates)) {
-        state = { jobs: parsed.jobs ?? [], candidates: parsed.candidates, activity: parsed.activity ?? [] };
-      }
-    }
-  } catch {
-    state = null;
-  }
+
+  state = { jobs: [], candidates: [], activity: [] };
   hydrated = true;
+
+  if (getUid()) {
+    subscribeToFirestore();
+  }
 }
 
-function persist() {
-  if (typeof window === "undefined" || !state) return;
-  try {
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ ...state, version: SCHEMA_VERSION }),
-    );
-  } catch {
-    // Storage full / private mode — keep in-memory state working.
+function subscribeToFirestore() {
+  unsubscribers.forEach((unsub) => unsub());
+  unsubscribers = [];
+  firestoreReady = false;
+
+  const jobsRef = jobsCol();
+  const candidatesRef = candidatesCol();
+  const activityRef = activityCol();
+  if (!jobsRef || !candidatesRef || !activityRef) return;
+
+  let jobsLoaded = false;
+  let candidatesLoaded = false;
+  let activityLoaded = false;
+
+  function checkReady() {
+    if (jobsLoaded && candidatesLoaded && activityLoaded && !firestoreReady) {
+      firestoreReady = true;
+      notify();
+    }
   }
+
+  function notify() {
+    for (const l of listeners) l();
+  }
+
+  const unsubJobs = onSnapshot(query(jobsRef, orderBy("createdAt", "desc")), (snap) => {
+    const s = state ?? { jobs: [], candidates: [], activity: [] };
+    const jobsMap = new Map<string, JobRequirements>();
+    for (const j of s.jobs) jobsMap.set(j.id, j);
+    for (const change of snap.docChanges()) {
+      const data = change.doc.data() as Record<string, unknown>;
+      if (change.type === "removed") {
+        jobsMap.delete(change.doc.id);
+      } else {
+        const job: JobRequirements = {
+          id: change.doc.id,
+          title: (data.title as string) ?? "",
+          company: data.company as string | undefined,
+          requiredSkills: (data.required_skills as JobRequirements["requiredSkills"]) ?? [],
+          preferredSkills: (data.preferred_skills as JobRequirements["preferredSkills"]) ?? [],
+          minYearsExperience: data.min_years_experience as number | undefined,
+          educationRequirement: data.education_requirement as JobRequirements["educationRequirement"],
+          certificationRequirements: (data.certification_requirements as string[]) ?? [],
+          seniorityTarget: data.seniority_target as JobRequirements["seniorityTarget"],
+          keywords: (data.keywords as string[]) ?? [],
+          domains: (data.domains as string[]) ?? [],
+          responsibilities: (data.responsibilities as string[]) ?? [],
+          sourceLength: data.source_length as number | undefined,
+          createdAt: (data.createdAt as string) ?? new Date().toISOString(),
+        };
+        jobsMap.set(change.doc.id, job);
+      }
+    }
+    state = { ...s, jobs: Array.from(jobsMap.values()) };
+    jobsLoaded = true;
+    checkReady();
+  });
+
+  const unsubCandidates = onSnapshot(query(candidatesRef, orderBy("createdAt", "desc")), (snap) => {
+    const s = state ?? { jobs: [], candidates: [], activity: [] };
+    const candMap = new Map<string, Candidate>();
+    for (const c of s.candidates) candMap.set(c.id, c);
+    for (const change of snap.docChanges()) {
+      const data = change.doc.data() as Record<string, unknown>;
+      if (change.type === "removed") {
+        candMap.delete(change.doc.id);
+      } else {
+        const candidate: Candidate = {
+          id: change.doc.id,
+          fileName: data.file_name as string | undefined,
+          resume: (data.resume as Candidate["resume"]) ?? { skills: [], experience: [], education: [], certifications: [], domains: [], rawTextLength: 0, confidence: 0, parseWarnings: [] },
+          screenings: (data.screenings as ScreeningRecord[]) ?? [],
+          notes: (data.notes as RecruiterNote[]) ?? [],
+          status: (data.status as ScreeningStatus) ?? "new",
+          createdAt: (data.createdAt as string) ?? new Date().toISOString(),
+        };
+        candMap.set(change.doc.id, candidate);
+      }
+    }
+    state = { ...s, candidates: Array.from(candMap.values()) };
+    candidatesLoaded = true;
+    checkReady();
+  });
+
+  const unsubActivity = onSnapshot(query(activityRef, orderBy("createdAt", "desc")), (snap) => {
+    const s = state ?? { jobs: [], candidates: [], activity: [] };
+    const acts: ActivityEntry[] = [];
+    for (const d of snap.docs) {
+      const data = d.data() as Record<string, unknown>;
+      acts.push({
+        id: d.id,
+        kind: (data.kind as ActivityEntry["kind"]) ?? "screen",
+        message: (data.message as string) ?? "",
+        at: (data.at as string) ?? (data.createdAt as string) ?? new Date().toISOString(),
+      });
+    }
+    state = { ...s, activity: acts };
+    activityLoaded = true;
+    checkReady();
+  });
+
+  unsubscribers = [unsubJobs, unsubCandidates, unsubActivity];
 }
 
 function emit() {
-  persist();
   for (const l of listeners) l();
 }
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
-  // Re-hydrate when returning to the tab (multi-tab safety).
-  if (typeof document !== "undefined") {
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        hydrated = false;
-        listener();
-      }
-    });
-  }
-  return () => listeners.delete(listener);
+  if (!hydrated) hydrate();
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      unsubscribers.forEach((unsub) => unsub());
+      unsubscribers = [];
+      firestoreReady = false;
+    }
+  };
 }
 
 /** React hook — re-renders whenever any part of the workspace changes. */
@@ -94,11 +225,82 @@ export function useWorkspace(): WorkspaceState {
   return useSyncExternalStore(
     subscribe,
     getState,
-    /** Server snapshot: stable shared reference (required by React). */
     function getServerState() {
       return EMPTY_STATE;
     },
   );
+}
+
+/* ───────────────────────── Firestore writes ───────────────────────── */
+
+async function writeJob(job: JobRequirements) {
+  if (!isFirebaseConfigured()) return;
+  const ref = jobsCol();
+  if (!ref) return;
+  try {
+    await setDoc(doc(ref, job.id), {
+      title: job.title,
+      company: job.company ?? null,
+      required_skills: job.requiredSkills,
+      preferred_skills: job.preferredSkills,
+      min_years_experience: job.minYearsExperience ?? null,
+      education_requirement: job.educationRequirement ?? null,
+      certification_requirements: job.certificationRequirements,
+      seniority_target: job.seniorityTarget ?? null,
+      keywords: job.keywords,
+      domains: job.domains,
+      responsibilities: job.responsibilities ?? [],
+      source_length: job.sourceLength ?? null,
+      createdAt: job.createdAt,
+    });
+  } catch (e) {
+    console.error("Failed to write job to Firestore:", e);
+  }
+}
+
+async function removeJob(jobId: string) {
+  if (!isFirebaseConfigured()) return;
+  const ref = jobsCol();
+  if (!ref) return;
+  try {
+    await deleteDoc(doc(ref, jobId));
+  } catch (e) {
+    console.error("Failed to delete job from Firestore:", e);
+  }
+}
+
+async function writeCandidate(candidate: Candidate) {
+  if (!isFirebaseConfigured()) return;
+  const ref = candidatesCol();
+  if (!ref) return;
+  try {
+    await setDoc(doc(ref, candidate.id), {
+      file_name: candidate.fileName ?? null,
+      resume: candidate.resume,
+      screenings: candidate.screenings,
+      notes: candidate.notes,
+      status: candidate.status,
+      createdAt: candidate.createdAt,
+    });
+  } catch (e) {
+    console.error("Failed to write candidate to Firestore:", e);
+  }
+}
+
+async function writeActivityEntry(entry: ActivityEntry) {
+  if (!isFirebaseConfigured()) return;
+  const ref = activityCol();
+  if (!ref) return;
+  try {
+    await setDoc(doc(ref, entry.id), {
+      kind: entry.kind,
+      message: entry.message,
+      at: entry.at,
+      createdAt: entry.at,
+    });
+  } catch (e) {
+    console.error("Failed to write activity to Firestore:", e);
+  }
 }
 
 /* ───────────────────────── Mutations ───────────────────────── */
@@ -107,6 +309,7 @@ export function upsertJobs(jobs: JobRequirements[]) {
   const s = getState();
   for (const job of jobs) {
     if (!s.jobs.some((j) => j.id === job.id)) s.jobs.unshift(job);
+    writeJob(job);
   }
   state = s;
   emit();
@@ -125,12 +328,16 @@ export function saveJob(job: JobRequirements) {
   });
   state = s;
   emit();
+
+  writeJob(job);
+  writeActivityEntry(s.activity[0]);
 }
 
 export function deleteJob(jobId: string) {
   const s = getState();
   state = { ...s, jobs: s.jobs.filter((j) => j.id !== jobId) };
   emit();
+  removeJob(jobId);
 }
 
 export function addScreenedCandidates(newCandidates: Candidate[], job: JobRequirements) {
@@ -151,29 +358,35 @@ export function addScreenedCandidates(newCandidates: Candidate[], job: JobRequir
       );
       if (freshScreens.length > 0) {
         updatedCount++;
-        s.candidates[existingIdx] = {
+        const updated = {
           ...existing,
           resume: mergeResume(existing.resume, nc.resume),
           screenings: [...existing.screenings, ...freshScreens],
           createdAt: existing.createdAt,
           fileName: existing.fileName ?? nc.fileName,
         };
+        s.candidates[existingIdx] = updated;
+        writeCandidate(updated);
       }
     } else {
       addedCount++;
       s.candidates.push(nc);
+      writeCandidate(nc);
     }
   }
 
-  s.activity.unshift({
+  const activityEntry: ActivityEntry = {
     id: crypto.randomUUID(),
     kind: "screen",
     message: `Screened ${newCandidates.length} candidate${newCandidates.length === 1 ? "" : "s"} against "${job.title}" (${addedCount} new, ${updatedCount} updated)`,
     at: new Date().toISOString(),
-  });
+  };
+  s.activity.unshift(activityEntry);
   s.activity = s.activity.slice(0, 60);
   state = s;
   emit();
+
+  writeActivityEntry(activityEntry);
 }
 
 function mergeResume(a: Candidate["resume"], b: Candidate["resume"]) {
@@ -183,28 +396,34 @@ function mergeResume(a: Candidate["resume"], b: Candidate["resume"]) {
 export function addNote(candidateId: string, text: string) {
   const s = getState();
   const note: RecruiterNote = { id: crypto.randomUUID(), text, createdAt: new Date().toISOString() };
+  const updatedCandidates = s.candidates.map((c) =>
+    c.id === candidateId ? { ...c, notes: [note, ...c.notes] } : c,
+  );
   state = {
     ...s,
-    candidates: s.candidates.map((c) =>
-      c.id === candidateId ? { ...c, notes: [note, ...c.notes] } : c,
-    ),
+    candidates: updatedCandidates,
     activity: [
       { id: crypto.randomUUID(), kind: "note" as const, message: `Note added to candidate`, at: note.createdAt },
       ...s.activity,
     ].slice(0, 60),
   };
   emit();
+
+  const candidate = updatedCandidates.find((c) => c.id === candidateId);
+  if (candidate) writeCandidate(candidate);
+  writeActivityEntry(state.activity[0]);
 }
 
 export function deleteNote(candidateId: string, noteId: string) {
   const s = getState();
-  state = {
-    ...s,
-    candidates: s.candidates.map((c) =>
-      c.id === candidateId ? { ...c, notes: c.notes.filter((n) => n.id !== noteId) } : c,
-    ),
-  };
+  const updatedCandidates = s.candidates.map((c) =>
+    c.id === candidateId ? { ...c, notes: c.notes.filter((n) => n.id !== noteId) } : c,
+  );
+  state = { ...s, candidates: updatedCandidates };
   emit();
+
+  const candidate = updatedCandidates.find((c) => c.id === candidateId);
+  if (candidate) writeCandidate(candidate);
 }
 
 const STATUSES: ScreeningStatus[] = ["new", "screening", "shortlisted", "interview", "rejected", "hired"];
@@ -212,15 +431,23 @@ export const ALL_STATUSES = STATUSES;
 
 export function setStatus(candidateId: string, status: ScreeningStatus) {
   const s = getState();
+  const activityEntry: ActivityEntry = {
+    id: crypto.randomUUID(),
+    kind: "status-change" as const,
+    message: `Candidate moved to ${status}`,
+    at: new Date().toISOString(),
+  };
+  const updatedCandidates = s.candidates.map((c) => (c.id === candidateId ? { ...c, status } : c));
   state = {
     ...s,
-    candidates: s.candidates.map((c) => (c.id === candidateId ? { ...c, status } : c)),
-    activity: [
-      { id: crypto.randomUUID(), kind: "status-change" as const, message: `Candidate moved to ${status}`, at: new Date().toISOString() },
-      ...s.activity.slice(0, 59),
-    ],
+    candidates: updatedCandidates,
+    activity: [activityEntry, ...s.activity.slice(0, 59)],
   };
   emit();
+
+  const candidate = updatedCandidates.find((c) => c.id === candidateId);
+  if (candidate) writeCandidate(candidate);
+  writeActivityEntry(activityEntry);
 }
 
 export function getCandidate(id: string): Candidate | undefined {
@@ -231,9 +458,39 @@ export function getJob(id: string): JobRequirements | undefined {
   return getState().jobs.find((j) => j.id === id);
 }
 
-export function resetWorkspace(demoData?: WorkspaceState) {
+export async function resetWorkspace(demoData?: WorkspaceState) {
   state = demoData ?? { jobs: [], candidates: [], activity: [] };
   emit();
+
+  if (!isFirebaseConfigured()) return;
+
+  const ref = jobsCol();
+  const cref = candidatesCol();
+  const aref = activityCol();
+  if (!ref || !cref || !aref) return;
+
+  try {
+    const { getDocs } = await import("firebase/firestore");
+    const [existingJobs, existingCands, existingActs] = await Promise.all([
+      getDocs(query(ref)),
+      getDocs(query(cref)),
+      getDocs(query(aref)),
+    ]);
+
+    const batch = writeBatch(getFirebaseDb());
+    existingJobs.forEach((d) => batch.delete(d.ref));
+    existingCands.forEach((d) => batch.delete(d.ref));
+    existingActs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+
+    if (demoData) {
+      for (const job of demoData.jobs) await writeJob(job);
+      for (const cand of demoData.candidates) await writeCandidate(cand);
+      for (const act of demoData.activity) await writeActivityEntry(act);
+    }
+  } catch (e) {
+    console.error("Failed to reset workspace in Firestore:", e);
+  }
 }
 
 export function importScreeningResult(payload: {

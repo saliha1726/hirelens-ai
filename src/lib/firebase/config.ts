@@ -2,6 +2,10 @@ import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 
+function hasFirebaseConfig(): boolean {
+  return !!(process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+}
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -11,37 +15,39 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
 
-if (typeof window !== "undefined") {
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApps()[0];
+function getApp(): FirebaseApp {
+  if (app) return app;
+  if (!hasFirebaseConfig()) {
+    throw new Error("Firebase is not configured. Set NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_PROJECT_ID in your environment.");
   }
-  auth = getAuth(app);
-  db = getFirestore(app);
-}
-
-export function getFirebaseApp(): FirebaseApp {
-  if (!app) {
-    app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  if (getApps().length) {
+    app = getApps()[0];
+  } else {
+    app = initializeApp(firebaseConfig);
   }
   return app;
 }
 
+export function getFirebaseApp(): FirebaseApp {
+  return getApp();
+}
+
 export function getFirebaseAuth(): Auth {
-  if (!auth) {
-    auth = getAuth(getFirebaseApp());
-  }
+  if (auth) return auth;
+  auth = getAuth(getApp());
   return auth;
 }
 
 export function getFirebaseDb(): Firestore {
-  if (!db) {
-    db = getFirestore(getFirebaseApp());
-  }
+  if (db) return db;
+  db = getFirestore(getApp());
   return db;
+}
+
+export function isFirebaseConfigured(): boolean {
+  return hasFirebaseConfig();
 }

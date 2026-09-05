@@ -17,9 +17,8 @@ export function DemoDataManager() {
   useEffect(() => {
     const s = getState();
     const empty = s.candidates.length === 0 && s.jobs.length === 0;
-    if (empty && !window.localStorage.getItem("hirelens.demo.seeded")) {
+    if (empty) {
       resetWorkspace(buildDemoWorkspace());
-      window.localStorage.setItem("hirelens.demo.seeded", "1");
     }
     setIsEmpty(getState().candidates.length === 0);
     setReady(true);
