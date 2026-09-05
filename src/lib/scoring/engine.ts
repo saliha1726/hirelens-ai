@@ -353,6 +353,7 @@ export function computeMatch(
   job: JobRequirements,
   rawResumeText: string,
 ): MatchResult {
+  const w = { ...FACTOR_WEIGHTS, ...job.weightOverrides };
   const req = scoreRequiredSkills(resume, rawResumeText, job);
   const pref = scorePreferredSkills(resume, rawResumeText, job);
   const rel = scoreRelevantExperience(resume, rawResumeText, job);
@@ -362,13 +363,13 @@ export function computeMatch(
   const kw = scoreKeywords(resume, rawResumeText, job);
 
   const factors: FactorScore[] = [
-    { key: "requiredSkills", label: FACTOR_LABELS.requiredSkills, weight: FACTOR_WEIGHTS.requiredSkills, score: req.score, detail: req.matched.length ? `${req.matched.length}/${job.requiredSkills.length} required skills matched` : "No required skills matched" },
-    { key: "relevantExperience", label: FACTOR_LABELS.relevantExperience, weight: FACTOR_WEIGHTS.relevantExperience, score: rel.score, detail: rel.detail },
-    { key: "yearsExperience", label: FACTOR_LABELS.yearsExperience, weight: FACTOR_WEIGHTS.yearsExperience, score: years.score, detail: years.detail },
-    { key: "preferredSkills", label: FACTOR_LABELS.preferredSkills, weight: FACTOR_WEIGHTS.preferredSkills, score: pref.score, detail: job.preferredSkills.length ? `${pref.matched.length}/${job.preferredSkills.length} preferred skills matched` : "No preferred skills specified" },
-    { key: "education", label: FACTOR_LABELS.education, weight: FACTOR_WEIGHTS.education, score: edu.score, detail: edu.detail },
-    { key: "certifications", label: FACTOR_LABELS.certifications, weight: FACTOR_WEIGHTS.certifications, score: certs.score, detail: job.certificationRequirements.length ? `${certs.matched.length}/${job.certificationRequirements.length} certifications matched` : "No certifications required" },
-    { key: "keywords", label: FACTOR_LABELS.keywords, weight: FACTOR_WEIGHTS.keywords, score: kw.score, detail: job.keywords.length ? `${kw.hits.length}/${Math.min(job.keywords.length, 25)} keyword signals present` : "Insufficient keywords extracted" },
+    { key: "requiredSkills", label: FACTOR_LABELS.requiredSkills, weight: w.requiredSkills, score: req.score, detail: req.matched.length ? `${req.matched.length}/${job.requiredSkills.length} required skills matched` : "No required skills matched" },
+    { key: "relevantExperience", label: FACTOR_LABELS.relevantExperience, weight: w.relevantExperience, score: rel.score, detail: rel.detail },
+    { key: "yearsExperience", label: FACTOR_LABELS.yearsExperience, weight: w.yearsExperience, score: years.score, detail: years.detail },
+    { key: "preferredSkills", label: FACTOR_LABELS.preferredSkills, weight: w.preferredSkills, score: pref.score, detail: job.preferredSkills.length ? `${pref.matched.length}/${job.preferredSkills.length} preferred skills matched` : "No preferred skills specified" },
+    { key: "education", label: FACTOR_LABELS.education, weight: w.education, score: edu.score, detail: edu.detail },
+    { key: "certifications", label: FACTOR_LABELS.certifications, weight: w.certifications, score: certs.score, detail: job.certificationRequirements.length ? `${certs.matched.length}/${job.certificationRequirements.length} certifications matched` : "No certifications required" },
+    { key: "keywords", label: FACTOR_LABELS.keywords, weight: w.keywords, score: kw.score, detail: job.keywords.length ? `${kw.hits.length}/${Math.min(job.keywords.length, 25)} keyword signals present` : "Insufficient keywords extracted" },
   ];
 
   const overall = Math.round(

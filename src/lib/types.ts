@@ -99,6 +99,7 @@ export interface JobRequirements {
   responsibilities?: string[];
   sourceLength?: number;
   createdAt: string;
+  weightOverrides?: Partial<Record<FactorKey, number>>;
 }
 
 /* ────────────────────────── Scoring ────────────────────────── */

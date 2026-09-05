@@ -1,15 +1,16 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Briefcase, GraduationCap, Award, Gauge, Download, Users, TrendingUp } from "lucide-react";
+import { ArrowLeft, Briefcase, GraduationCap, Award, Gauge, Download, Users, TrendingUp, SlidersHorizontal, RotateCcw, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
-import { useWorkspace } from "@/lib/client/store";
+import { useWorkspace, saveJob } from "@/lib/client/store";
 import { Badge, Button, ButtonLink, Card, CardContent, EmptyState } from "@/components/ui/primitives";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { exportCandidatesToCSV } from "@/lib/export-csv";
 import { cn, scoreTone } from "@/lib/utils";
-import type { ScreeningStatus } from "@/lib/types";
+import { FACTOR_WEIGHTS, FACTOR_LABELS } from "@/lib/scoring/engine";
+import type { FactorKey, JobRequirements, ScreeningStatus } from "@/lib/types";
 
 const STATUS_COLORS: Record<ScreeningStatus, string> = {
   new: "bg-slate-400",
@@ -212,6 +213,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         </Card>
       </div>
 
+      {/* Scoring weights */}
+      <WeightEditor job={job} />
+
       {/* Ranking */}
       <Card className="mt-6">
         <CardContent className="pt-5">
@@ -283,6 +287,102 @@ function StatCard({ icon: Icon, label, value, suffix }: { icon: React.ComponentT
       <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight">
         {value}{suffix}
       </p>
+    </Card>
+  );
+}
+
+function WeightEditor({ job }: { job: JobRequirements }) {
+  const [open, setOpen] = useState(false);
+  const [weights, setWeights] = useState<Record<FactorKey, number>>({
+    requiredSkills: job.weightOverrides?.requiredSkills ?? FACTOR_WEIGHTS.requiredSkills,
+    relevantExperience: job.weightOverrides?.relevantExperience ?? FACTOR_WEIGHTS.relevantExperience,
+    yearsExperience: job.weightOverrides?.yearsExperience ?? FACTOR_WEIGHTS.yearsExperience,
+    preferredSkills: job.weightOverrides?.preferredSkills ?? FACTOR_WEIGHTS.preferredSkills,
+    education: job.weightOverrides?.education ?? FACTOR_WEIGHTS.education,
+    certifications: job.weightOverrides?.certifications ?? FACTOR_WEIGHTS.certifications,
+    keywords: job.weightOverrides?.keywords ?? FACTOR_WEIGHTS.keywords,
+  });
+  const [saved, setSaved] = useState(false);
+
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+
+  function updateWeight(key: FactorKey, value: number) {
+    setWeights((prev) => ({ ...prev, [key]: Math.max(0, Math.min(100, value)) }));
+    setSaved(false);
+  }
+
+  function resetToDefaults() {
+    setWeights({
+      requiredSkills: FACTOR_WEIGHTS.requiredSkills,
+      relevantExperience: FACTOR_WEIGHTS.relevantExperience,
+      yearsExperience: FACTOR_WEIGHTS.yearsExperience,
+      preferredSkills: FACTOR_WEIGHTS.preferredSkills,
+      education: FACTOR_WEIGHTS.education,
+      certifications: FACTOR_WEIGHTS.certifications,
+      keywords: FACTOR_WEIGHTS.keywords,
+    });
+    setSaved(false);
+  }
+
+  function handleSave() {
+    saveJob({ ...job, weightOverrides: weights });
+    setSaved(true);
+  }
+
+  return (
+    <Card className="mt-6">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between px-6 pt-5 pb-2 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-brand-500" />
+          <h2 className="font-semibold">Scoring weights</h2>
+          <span className="text-xs text-slate-400">(total: {total}%)</span>
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <CardContent className="pt-0 pb-5">
+          <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+            Adjust how much each factor contributes to the overall match score. Changes apply to future screenings for this job.
+          </p>
+          <div className="space-y-3">
+            {(Object.keys(weights) as FactorKey[]).map((key) => (
+              <div key={key} className="flex items-center gap-3">
+                <span className="w-44 text-xs font-medium text-slate-600 dark:text-slate-300">{FACTOR_LABELS[key]}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={80}
+                  value={weights[key]}
+                  onChange={(e) => updateWeight(key, Number(e.target.value))}
+                  className="flex-1 accent-brand-600"
+                />
+                <span className="w-10 text-right text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-200">
+                  {weights[key]}%
+                </span>
+                <span className="w-8 text-right text-[10px] text-slate-400">
+                  (default {FACTOR_WEIGHTS[key]})
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <Button size="sm" onClick={handleSave} disabled={total !== 100}>
+              {saved ? "Saved!" : "Save weights"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={resetToDefaults}>
+              <RotateCcw className="h-3.5 w-3.5" /> Reset to defaults
+            </Button>
+            {total !== 100 && (
+              <span className="text-xs text-amber-600 dark:text-amber-400">
+                Weights must sum to 100% (currently {total}%)
+              </span>
+            )}
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 }
