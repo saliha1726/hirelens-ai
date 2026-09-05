@@ -33,5 +33,9 @@ yarn-error.log*
 # testing
 /coverage
 
+# firebase service account keys — never commit
+*-firebase-adminsdk-*.json
+-firebase-adminsdk-*.json
+
 .vercel
 .env*
