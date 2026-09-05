@@ -11,6 +11,7 @@ import {
   Briefcase,
   GitCompareArrows,
   BarChart3,
+  Columns3,
   Menu,
   X,
   Eye,
@@ -31,6 +32,7 @@ const NAV = [
   { href: "/screen", label: "AI Screening", icon: ScanSearch },
   { href: "/jobs", label: "Jobs", icon: Briefcase },
   { href: "/candidates", label: "Candidates", icon: Users },
+  { href: "/pipeline", label: "Pipeline", icon: Columns3 },
   { href: "/compare", label: "Compare", icon: GitCompareArrows },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
