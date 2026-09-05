@@ -123,7 +123,7 @@ export default function JobBoardPage() {
           transition={{ delay: 0.16 }}
           className="mx-auto mt-4 max-w-xl text-balance text-slate-600 dark:text-slate-300"
         >
-          We're looking for talented people to help us build the future of hiring.
+          We&apos;re looking for talented people to help us build the future of hiring.
           Browse our open positions below.
         </motion.p>
       </section>
@@ -136,7 +136,7 @@ export default function JobBoardPage() {
               No open positions yet
             </p>
             <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">
-              Check back soon — we're always growing.
+              Check back soon — we&apos;re always growing.
             </p>
           </div>
         ) : (
