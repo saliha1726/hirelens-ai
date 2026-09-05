@@ -42,7 +42,7 @@ const NAV = [
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <Link href="/" className="focus-ring group flex items-center gap-2.5 rounded-lg" aria-label="HireLens AI home">
-      <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 shadow-md shadow-brand-600/30 transition-transform duration-300 group-hover:scale-105">
+      <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-rose-400 to-pink-600 shadow-md shadow-rose-500/30 transition-transform duration-300 group-hover:scale-105">
         <Eye className="h-5 w-5 text-white" strokeWidth={2.2} />
       </span>
       {!compact && (

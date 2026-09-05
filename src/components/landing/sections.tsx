@@ -27,15 +27,15 @@ const rise = {
 export function BackgroundGlow() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-      <div className="absolute -top-40 left-1/2 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-r from-brand-400/20 via-violet-400/15 to-brand-300/20 blur-3xl dark:from-brand-600/15 dark:via-violet-600/10 dark:to-brand-500/15" />
-      <div className="absolute right-[-200px] top-[45%] h-[400px] w-[400px] rounded-full bg-emerald-300/10 blur-3xl dark:bg-emerald-500/5" />
+      <div className="absolute -top-40 left-1/2 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-r from-rose-300/20 via-pink-300/15 to-rose-200/20 blur-3xl dark:from-rose-600/15 dark:via-pink-600/10 dark:to-rose-500/15" />
+      <div className="absolute right-[-200px] top-[45%] h-[400px] w-[400px] rounded-full bg-rose-200/10 blur-3xl dark:bg-rose-500/5" />
       <motion.div
-        className="absolute left-[-100px] top-[30%] h-[300px] w-[300px] rounded-full bg-violet-300/10 blur-3xl dark:bg-violet-500/5"
+        className="absolute left-[-100px] top-[30%] h-[300px] w-[300px] rounded-full bg-pink-200/10 blur-3xl dark:bg-pink-500/5"
         animate={{ y: [0, -30, 0, 20, 0], x: [0, 15, -10, 5, 0], scale: [1, 1.05, 0.97, 1.03, 1] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
-        className="absolute bottom-[10%] left-[20%] h-[250px] w-[250px] rounded-full bg-brand-300/8 blur-3xl dark:bg-brand-500/5"
+        className="absolute bottom-[10%] left-[20%] h-[250px] w-[250px] rounded-full bg-rose-300/8 blur-3xl dark:bg-rose-500/5"
         animate={{ y: [0, 20, -15, 10, 0], x: [0, -10, 8, -5, 0] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
       />
