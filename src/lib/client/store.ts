@@ -24,6 +24,7 @@ import { getFirebaseDb, getFirebaseAuth, isFirebaseConfigured } from "@/lib/fire
 import type {
   ActivityEntry,
   Candidate,
+  CandidateTag,
   JobRequirements,
   RecruiterNote,
   ScreeningRecord,
@@ -172,6 +173,7 @@ function subscribeToFirestore() {
           screenings: (data.screenings as ScreeningRecord[]) ?? [],
           notes: (data.notes as RecruiterNote[]) ?? [],
           interviews: (data.interviews as Candidate["interviews"]) ?? [],
+          tags: (data.tags as CandidateTag[]) ?? [],
           status: (data.status as ScreeningStatus) ?? "new",
           createdAt: (data.createdAt as string) ?? new Date().toISOString(),
         };
@@ -281,6 +283,7 @@ async function writeCandidate(candidate: Candidate) {
       screenings: candidate.screenings,
       notes: candidate.notes,
       interviews: candidate.interviews,
+      tags: candidate.tags,
       status: candidate.status,
       createdAt: candidate.createdAt,
     });
@@ -395,9 +398,9 @@ function mergeResume(a: Candidate["resume"], b: Candidate["resume"]) {
   return b.skills.length >= a.skills.length ? b : a;
 }
 
-export function addNote(candidateId: string, text: string) {
+export function addNote(candidateId: string, text: string, type: RecruiterNote["type"] = "general") {
   const s = getState();
-  const note: RecruiterNote = { id: crypto.randomUUID(), text, createdAt: new Date().toISOString() };
+  const note: RecruiterNote = { id: crypto.randomUUID(), text, type, pinned: false, createdAt: new Date().toISOString() };
   const updatedCandidates = s.candidates.map((c) =>
     c.id === candidateId ? { ...c, notes: [note, ...c.notes] } : c,
   );
@@ -426,6 +429,101 @@ export function deleteNote(candidateId: string, noteId: string) {
 
   const candidate = updatedCandidates.find((c) => c.id === candidateId);
   if (candidate) writeCandidate(candidate);
+}
+
+export function editNote(candidateId: string, noteId: string, text: string) {
+  const s = getState();
+  const updatedCandidates = s.candidates.map((c) =>
+    c.id === candidateId
+      ? { ...c, notes: c.notes.map((n) => (n.id === noteId ? { ...n, text, updatedAt: new Date().toISOString() } : n)) }
+      : c,
+  );
+  state = { ...s, candidates: updatedCandidates };
+  emit();
+  const candidate = updatedCandidates.find((c) => c.id === candidateId);
+  if (candidate) writeCandidate(candidate);
+}
+
+export function toggleNotePin(candidateId: string, noteId: string) {
+  const s = getState();
+  const updatedCandidates = s.candidates.map((c) =>
+    c.id === candidateId
+      ? { ...c, notes: c.notes.map((n) => (n.id === noteId ? { ...n, pinned: !n.pinned } : n)) }
+      : c,
+  );
+  state = { ...s, candidates: updatedCandidates };
+  emit();
+  const candidate = updatedCandidates.find((c) => c.id === candidateId);
+  if (candidate) writeCandidate(candidate);
+}
+
+export function addTag(candidateId: string, tag: CandidateTag) {
+  const s = getState();
+  const updatedCandidates = s.candidates.map((c) =>
+    c.id === candidateId ? { ...c, tags: [...c.tags.filter((t) => t.id !== tag.id), tag] } : c,
+  );
+  state = { ...s, candidates: updatedCandidates };
+  emit();
+  const candidate = updatedCandidates.find((c) => c.id === candidateId);
+  if (candidate) writeCandidate(candidate);
+}
+
+export function removeTag(candidateId: string, tagId: string) {
+  const s = getState();
+  const updatedCandidates = s.candidates.map((c) =>
+    c.id === candidateId ? { ...c, tags: c.tags.filter((t) => t.id !== tagId) } : c,
+  );
+  state = { ...s, candidates: updatedCandidates };
+  emit();
+  const candidate = updatedCandidates.find((c) => c.id === candidateId);
+  if (candidate) writeCandidate(candidate);
+}
+
+export function bulkUpdateStatus(candidateIds: string[], status: ScreeningStatus) {
+  const s = getState();
+  const updatedCandidates = s.candidates.map((c) =>
+    candidateIds.includes(c.id) ? { ...c, status } : c,
+  );
+  state = { ...s, candidates: updatedCandidates };
+  emit();
+  for (const id of candidateIds) {
+    const c = updatedCandidates.find((x) => x.id === id);
+    if (c) writeCandidate(c);
+  }
+}
+
+export function bulkAddTag(candidateIds: string[], tag: CandidateTag) {
+  const s = getState();
+  const updatedCandidates = s.candidates.map((c) =>
+    candidateIds.includes(c.id) ? { ...c, tags: [...c.tags.filter((t) => t.id !== tag.id), tag] } : c,
+  );
+  state = { ...s, candidates: updatedCandidates };
+  emit();
+  for (const id of candidateIds) {
+    const c = updatedCandidates.find((x) => x.id === id);
+    if (c) writeCandidate(c);
+  }
+}
+
+export function bulkDelete(candidateIds: string[]) {
+  const s = getState();
+  const updatedCandidates = s.candidates.filter((c) => !candidateIds.includes(c.id));
+  state = { ...s, candidates: updatedCandidates };
+  emit();
+  for (const id of candidateIds) {
+    removeCandidate(id);
+  }
+}
+
+function removeCandidate(candidateId: string) {
+  if (!isFirebaseConfigured()) return;
+  const ref = candidatesCol();
+  if (!ref) return;
+  try {
+    deleteDoc(doc(ref, candidateId));
+  } catch (e) {
+    console.error("Failed to delete candidate from Firestore:", e);
+  }
 }
 
 const STATUSES: ScreeningStatus[] = ["new", "screening", "shortlisted", "interview", "rejected", "hired"];
@@ -526,6 +624,7 @@ export function importScreeningResult(payload: {
       resume: r.resume,
       notes: [],
       interviews: [],
+      tags: [],
       status: "new",
       createdAt: now,
       screenings: [

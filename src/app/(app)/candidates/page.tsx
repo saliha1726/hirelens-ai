@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Users, GitCompareArrows, Download } from "lucide-react";
-import type { ScreeningStatus } from "@/lib/types";
-import { useWorkspace } from "@/lib/client/store";
+import { Search, Users, GitCompareArrows, Download, Trash2, ArrowRight } from "lucide-react";
+import type { ScreeningStatus, CandidateTag } from "@/lib/types";
+import { useWorkspace, bulkUpdateStatus, bulkAddTag, bulkDelete } from "@/lib/client/store";
 import { ALL_STATUSES } from "@/lib/client/store";
 import { Button, ButtonLink, Card, EmptyState } from "@/components/ui/primitives";
 import { CandidateRow } from "@/components/candidate/candidate-card";
@@ -148,6 +148,56 @@ export default function CandidatesPage() {
           ))}
         </div>
       </Card>
+
+      {/* Bulk actions bar */}
+      {selected.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-950/30">
+          <span className="text-sm font-medium text-brand-700 dark:text-brand-300">
+            {selected.length} selected
+          </span>
+          <select
+            onChange={(e) => {
+              if (e.target.value) {
+                bulkUpdateStatus(selected, e.target.value as ScreeningStatus);
+                setSelected([]);
+              }
+            }}
+            className="rounded-lg border border-brand-200 bg-white px-2 py-1.5 text-xs dark:border-brand-700 dark:bg-slate-900"
+          >
+            <option value="">Change status...</option>
+            {ALL_STATUSES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => {
+              const tag: CandidateTag = { id: crypto.randomUUID(), name: "Bulk Tag", color: "#f43f5e" };
+              bulkAddTag(selected, tag);
+              setSelected([]);
+            }}
+            className="rounded-lg border border-brand-200 bg-white px-2.5 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-700 dark:bg-slate-900"
+          >
+            Add tag
+          </button>
+          <button
+            onClick={() => {
+              if (confirm(`Delete ${selected.length} candidates?`)) {
+                bulkDelete(selected);
+                setSelected([]);
+              }
+            }}
+            className="rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-900"
+          >
+            <Trash2 className="mr-1 inline h-3 w-3" /> Delete
+          </button>
+          <button
+            onClick={() => setSelected([])}
+            className="ml-auto text-xs text-slate-400 hover:text-slate-600"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <EmptyState

@@ -101,6 +101,21 @@ export default function AnalyticsPage() {
     return { avgScore, medianScore, highScores, lowScores, buckets, pipeline, topSkills, jobStats, timeline, totalScreenings: allScores.length };
   }, [ws]);
 
+  const funnel = useMemo(() => {
+    const total = ws.candidates.length || 1;
+    const stages = STATUS_PIPELINE.map((status) => ({
+      status,
+      count: ws.candidates.filter((c) => c.status === status).length,
+    }));
+    return stages.map((s, i) => ({
+      ...s,
+      pct: Math.round((s.count / total) * 100),
+      conversionFromPrev: i > 0 && stages[i - 1].count > 0
+        ? Math.round((s.count / stages[i - 1].count) * 100)
+        : null,
+    }));
+  }, [ws]);
+
   if (!mounted) {
     return (
       <div className="space-y-6">
@@ -199,6 +214,43 @@ export default function AnalyticsPage() {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+
+        {/* Funnel Conversion */}
+        <Card>
+          <div className="px-6 pt-5">
+            <h2 className="font-semibold">Hiring funnel</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Conversion rates between stages</p>
+          </div>
+          <CardContent className="mt-4">
+            <div className="space-y-2">
+              {funnel.map((stage, i) => (
+                <div key={stage.status} className="flex items-center gap-3">
+                  <span className="w-20 text-xs font-medium capitalize text-slate-600 dark:text-slate-300">{stage.status}</span>
+                  <div className="flex-1 relative">
+                    <div className="h-8 overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${stage.pct}%` }}
+                        transition={{ duration: 0.6, delay: i * 0.05 }}
+                        className={cn("h-full rounded-lg", STATUS_COLORS[stage.status])}
+                      />
+                    </div>
+                  </div>
+                  <span className="w-10 text-right text-xs font-bold tabular-nums text-slate-600 dark:text-slate-300">{stage.count}</span>
+                  {stage.conversionFromPrev !== null && (
+                    <span className={cn(
+                      "w-14 text-right text-[10px] font-medium tabular-nums",
+                      stage.conversionFromPrev >= 50 ? "text-emerald-600" : stage.conversionFromPrev >= 25 ? "text-amber-600" : "text-rose-600",
+                    )}>
+                      {stage.conversionFromPrev}%
+                    </span>
+                  )}
+                  {stage.conversionFromPrev === null && <span className="w-14" />}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 

@@ -189,7 +189,16 @@ export type ScreeningStatus =
 export interface RecruiterNote {
   id: string;
   text: string;
+  type: "general" | "interview" | "feedback" | "screening";
+  pinned: boolean;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CandidateTag {
+  id: string;
+  name: string;
+  color: string;
 }
 
 export interface Interview {
@@ -198,7 +207,31 @@ export interface Interview {
   duration: number; // minutes
   type: "phone" | "video" | "onsite" | "technical";
   notes?: string;
+  scorecard?: InterviewScorecard;
   createdAt: string;
+}
+
+export interface InterviewScorecard {
+  cultureFit: number;       // 1-5
+  technicalSkill: number;   // 1-5
+  communication: number;    // 1-5
+  problemSolving: number;   // 1-5
+  leadership: number;       // 1-5
+  overallImpression: number; // 1-5
+  strengths: string[];
+  concerns: string[];
+  recommendation: "strong-hire" | "hire" | "lean-hire" | "no-hire" | "strong-no-hire";
+  additionalNotes: string;
+}
+
+export type TimelineEventKind = "screening" | "status-change" | "note" | "interview" | "tag-added" | "tag-removed";
+
+export interface TimelineEvent {
+  id: string;
+  kind: TimelineEventKind;
+  message: string;
+  at: string;
+  meta?: Record<string, unknown>;
 }
 
 /** One candidate = parsed resume + screening results against jobs. */
@@ -209,6 +242,7 @@ export interface Candidate {
   screenings: ScreeningRecord[];
   notes: RecruiterNote[];
   interviews: Interview[];
+  tags: CandidateTag[];
   status: ScreeningStatus;
   createdAt: string;
 }

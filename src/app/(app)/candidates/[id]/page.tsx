@@ -15,8 +15,8 @@ import {
   Printer,
   Trash2,
 } from "lucide-react";
-import type { ScreeningRecord } from "@/lib/types";
-import { useWorkspace, addNote, deleteNote, setStatus } from "@/lib/client/store";
+import type { ScreeningRecord, RecruiterNote, CandidateTag } from "@/lib/types";
+import { useWorkspace, addNote, deleteNote, editNote, toggleNotePin, addTag, removeTag, setStatus } from "@/lib/client/store";
 import { ALL_STATUSES } from "@/lib/client/store";
 import { Button, Card, CardContent, EmptyState } from "@/components/ui/primitives";
 import { ScoreRing } from "@/components/ui/score-ring";
@@ -30,6 +30,10 @@ import {
 import { cn, formatDate, initialsOf, timeAgo } from "@/lib/utils";
 import { exportCandidatePDF } from "@/lib/export-pdf";
 import { InterviewScheduler } from "@/components/candidate/interview-scheduler";
+import { TagManager } from "@/components/candidate/tag-manager";
+import { RichNotes } from "@/components/candidate/rich-notes";
+import { CandidateTimeline } from "@/components/candidate/timeline";
+import { ScorecardDisplay } from "@/components/candidate/scorecard";
 
 export default function CandidateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -210,8 +214,28 @@ function CandidateBody({ candidateId, screenings }: { candidateId: string; scree
 
         {/* Side column */}
         <div className="space-y-5">
+          {/* Tags */}
+          <Card>
+            <CardContent className="pt-5">
+              <h3 className="mb-2 text-sm font-semibold">Tags</h3>
+              <TagManager
+                tags={candidate.tags}
+                onAdd={(tag) => addTag(candidate.id, tag)}
+                onRemove={(tagId) => removeTag(candidate.id, tagId)}
+              />
+            </CardContent>
+          </Card>
+
           <InterviewScheduler candidate={candidate} />
           <ProfileSection resume={r} />
+
+          {/* Timeline */}
+          <Card>
+            <CardContent className="pt-5">
+              <h3 className="mb-3 text-sm font-semibold">Activity Timeline</h3>
+              <CandidateTimeline candidate={candidate} />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </>
@@ -327,47 +351,19 @@ function NotesSection({
   notes,
 }: {
   candidateId: string;
-  notes: { id: string; text: string; createdAt: string }[];
+  notes: RecruiterNote[];
 }) {
-  const [draft, setDraft] = useState("");
   return (
     <Card className="no-print">
       <CardContent className="pt-5">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Recruiter notes</h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const text = draft.trim();
-            if (!text) return;
-            addNote(candidateId, text);
-            setDraft("");
-          }}
-          className="flex gap-2"
-        >
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Add a note about this candidate…"
-            maxLength={1000}
-            className="focus-ring flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-900"
-          />
-          <Button type="submit" disabled={!draft.trim()}>Add</Button>
-        </form>
-        <div className="mt-4 space-y-2.5">
-          {notes.length === 0 && <p className="text-xs text-slate-400">No notes yet.</p>}
-          {notes.map((n) => (
-            <div key={n.id} className="group flex items-start gap-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-              <p className="min-w-0 flex-1 text-sm leading-relaxed">{n.text}</p>
-              <button
-                onClick={() => deleteNote(candidateId, n.id)}
-                aria-label="Delete note"
-                className="rounded-md p-1 text-slate-300 opacity-0 transition-opacity hover:text-rose-500 group-hover:opacity-100"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
+        <RichNotes
+          notes={notes}
+          onAdd={(text, type) => addNote(candidateId, text, type)}
+          onEdit={(noteId, text) => editNote(candidateId, noteId, text)}
+          onDelete={(noteId) => deleteNote(candidateId, noteId)}
+          onTogglePin={(noteId) => toggleNotePin(candidateId, noteId)}
+        />
       </CardContent>
     </Card>
   );

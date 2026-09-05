@@ -179,31 +179,38 @@ function InterviewRow({
 
   return (
     <div className={cn(
-      "flex items-center gap-3 rounded-xl border p-3 transition-colors",
+      "rounded-xl border p-3 transition-colors",
       isPast
         ? "border-slate-200 bg-slate-50/50 opacity-60 dark:border-slate-800 dark:bg-slate-900/30"
         : "border-slate-200 bg-white hover:border-brand-200 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-700",
     )}>
-      <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", typeInfo.color)}>
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">
-          {date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-          {" at "}
-          {date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-        </p>
-        <p className="text-xs text-slate-400">
-          {interview.duration} min · {typeInfo.label}
-          {interview.notes ? ` · ${interview.notes}` : ""}
-        </p>
+      <div className="flex items-center gap-3">
+        <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", typeInfo.color)}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">
+            {date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+            {" at "}
+            {date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          </p>
+          <p className="text-xs text-slate-400">
+            {interview.duration} min · {typeInfo.label}
+            {interview.notes ? ` · ${interview.notes}` : ""}
+          </p>
+        </div>
+        {interview.scorecard && (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+            Scored
+          </span>
+        )}
+        <button
+          onClick={() => onDelete(interview.id)}
+          className="rounded-lg p-1.5 text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
-      <button
-        onClick={() => onDelete(interview.id)}
-        className="rounded-lg p-1.5 text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
     </div>
   );
 }

@@ -116,6 +116,14 @@ export function ResumeDropzone({
               >
                 <FileText className={cn("h-4 w-4 shrink-0", pf.error ? "text-rose-500" : "text-brand-500")} />
                 <span className="min-w-0 flex-1 truncate font-medium">{pf.file.name}</span>
+                <span className={cn(
+                  "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase",
+                  pf.file.name.endsWith(".pdf") ? "bg-rose-100 text-rose-600 dark:bg-rose-950/50" :
+                  pf.file.name.endsWith(".docx") ? "bg-blue-100 text-blue-600 dark:bg-blue-950/50" :
+                  "bg-slate-100 text-slate-500 dark:bg-slate-800",
+                )}>
+                  {pf.file.name.split(".").pop()}
+                </span>
                 <span className={cn("shrink-0 text-xs", pf.error ? "font-medium text-rose-600 dark:text-rose-300" : "text-slate-400")}>
                   {pf.error ?? formatBytes(pf.file.size)}
                 </span>

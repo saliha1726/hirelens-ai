@@ -370,11 +370,14 @@ export function buildDemoWorkspace(): WorkspaceData {
               {
                 id: `demo-n-${ri}`,
                 text: "Strong portfolio walkthrough in screening call. Check availability for onsite.",
+                type: "general" as const,
+                pinned: true,
                 createdAt: new Date(baseTime + ri * 36e5).toISOString(),
               },
             ]
           : [],
       interviews: [],
+      tags: ri === 0 ? [{ id: "tag-referral", name: "Referral", color: "#f43f5e" }] : [],
       status: ri === 0 ? "shortlisted" : ri === 3 ? "interview" : "new",
       createdAt: new Date(baseTime + ri * 36e5).toISOString(),
     });

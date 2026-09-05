@@ -87,6 +87,7 @@ function makeCandidate(overrides?: Partial<Candidate>): Candidate {
     screenings: [],
     notes: [],
     interviews: [],
+    tags: [],
     status: "new",
     createdAt: new Date().toISOString(),
     ...overrides,
