@@ -53,6 +53,17 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     return { avg, best, worst, high, total: ranked.length, buckets, pipeline };
   }, [ranked]);
 
+  const [copied, setCopied] = useState(false);
+  const copyLink = useCallback(() => {
+    const wsId = getActiveWorkspaceId();
+    if (!wsId || !job) return;
+    const url = `${window.location.origin}/jobs/${wsId}/${job.id}/apply`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [job]);
+
   if (!job) {
     return (
       <div className="mx-auto max-w-3xl">
@@ -64,17 +75,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       </div>
     );
   }
-
-  const [copied, setCopied] = useState(false);
-  const copyLink = useCallback(() => {
-    const wsId = getActiveWorkspaceId();
-    if (!wsId) return;
-    const url = `${window.location.origin}/jobs/${wsId}/${job.id}/apply`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [job.id]);
 
   return (
     <div className="mx-auto max-w-6xl">
