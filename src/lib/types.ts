@@ -264,6 +264,60 @@ export interface ActivityEntry {
   at: string;
 }
 
+/* ────────────────────────── Team collaboration ────────────────────────── */
+
+export type WorkspaceRole = "admin" | "recruiter" | "viewer";
+
+export interface WorkspaceMember {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  role: WorkspaceRole;
+  joinedAt: string;
+}
+
+export interface WorkspaceDoc {
+  id: string;
+  name: string;
+  ownerId: string;
+  createdAt: string;
+}
+
+/* ────────────────────────── Offer tracking ────────────────────────── */
+
+export type OfferStatus = "draft" | "sent" | "accepted" | "declined" | "expired" | "rescinded";
+
+export interface Offer {
+  id: string;
+  candidateId: string;
+  jobId: string;
+  status: OfferStatus;
+  salary?: number;
+  currency: string;
+  offerDate: string;
+  expectedStartDate?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ────────────────────────── Onboarding ────────────────────────── */
+
+export type OnboardingTaskStatus = "pending" | "in-progress" | "completed";
+
+export interface OnboardingTask {
+  id: string;
+  candidateId: string;
+  title: string;
+  description?: string;
+  status: OnboardingTaskStatus;
+  dueDate?: string;
+  assignedTo?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
 export interface WorkspaceData {
   version: number;
   jobs: JobRequirements[];

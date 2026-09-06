@@ -644,3 +644,154 @@ export function importScreeningResult(payload: {
   addScreenedCandidates(candidates, payload.job);
   return candidates;
 }
+
+/* ───────────────────────── Offer tracking ───────────────────────── */
+
+import type { Offer, OfferStatus, OnboardingTask, OnboardingTaskStatus } from "@/lib/types";
+
+let offersState: Offer[] = [];
+let onboardingState: OnboardingTask[] = [];
+
+function offersCol() {
+  const uid = getUid();
+  if (!uid) return null;
+  return collection(getFirebaseDb(), `workspaces/${uid}/offers`);
+}
+
+function onboardingCol() {
+  const uid = getUid();
+  if (!uid) return null;
+  return collection(getFirebaseDb(), `workspaces/${uid}/onboarding`);
+}
+
+export function getOffers(): Offer[] {
+  return offersState;
+}
+
+export function getOnboardingTasks(): OnboardingTask[] {
+  return onboardingState;
+}
+
+export async function createOffer(offer: Omit<Offer, "id" | "createdAt" | "updatedAt">): Promise<Offer | null> {
+  if (!isFirebaseConfigured()) return null;
+  const ref = offersCol();
+  if (!ref) return null;
+
+  const newOffer: Offer = {
+    ...offer,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  try {
+    await setDoc(doc(ref, newOffer.id), newOffer);
+    offersState = [newOffer, ...offersState];
+    emit();
+    return newOffer;
+  } catch (e) {
+    console.error("Failed to create offer:", e);
+    return null;
+  }
+}
+
+export async function updateOffer(offer: Offer): Promise<void> {
+  if (!isFirebaseConfigured()) return;
+  const ref = offersCol();
+  if (!ref) return;
+
+  const updated = { ...offer, updatedAt: new Date().toISOString() };
+  try {
+    await setDoc(doc(ref, offer.id), updated);
+    offersState = offersState.map((o) => (o.id === offer.id ? updated : o));
+    emit();
+  } catch (e) {
+    console.error("Failed to update offer:", e);
+  }
+}
+
+export async function updateOfferStatus(offerId: string, status: OfferStatus): Promise<void> {
+  const offer = offersState.find((o) => o.id === offerId);
+  if (!offer) return;
+  await updateOffer({ ...offer, status });
+}
+
+export async function deleteOffer(offerId: string): Promise<void> {
+  if (!isFirebaseConfigured()) return;
+  const ref = offersCol();
+  if (!ref) return;
+
+  try {
+    await deleteDoc(doc(ref, offerId));
+    offersState = offersState.filter((o) => o.id !== offerId);
+    emit();
+  } catch (e) {
+    console.error("Failed to delete offer:", e);
+  }
+}
+
+export function getOfferForCandidate(candidateId: string): Offer | undefined {
+  return offersState.find((o) => o.candidateId === candidateId);
+}
+
+/* ───────────────────────── Onboarding tasks ───────────────────────── */
+
+export async function createOnboardingTask(task: Omit<OnboardingTask, "id" | "createdAt">): Promise<OnboardingTask | null> {
+  if (!isFirebaseConfigured()) return null;
+  const ref = onboardingCol();
+  if (!ref) return null;
+
+  const newTask: OnboardingTask = {
+    ...task,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    await setDoc(doc(ref, newTask.id), newTask);
+    onboardingState = [newTask, ...onboardingState];
+    emit();
+    return newTask;
+  } catch (e) {
+    console.error("Failed to create onboarding task:", e);
+    return null;
+  }
+}
+
+export async function updateOnboardingTask(task: OnboardingTask): Promise<void> {
+  if (!isFirebaseConfigured()) return;
+  const ref = onboardingCol();
+  if (!ref) return;
+
+  try {
+    await setDoc(doc(ref, task.id), task);
+    onboardingState = onboardingState.map((t) => (t.id === task.id ? task : t));
+    emit();
+  } catch (e) {
+    console.error("Failed to update onboarding task:", e);
+  }
+}
+
+export async function completeOnboardingTask(taskId: string): Promise<void> {
+  const task = onboardingState.find((t) => t.id === taskId);
+  if (!task) return;
+  await updateOnboardingTask({ ...task, status: "completed", completedAt: new Date().toISOString() });
+}
+
+export async function deleteOnboardingTask(taskId: string): Promise<void> {
+  if (!isFirebaseConfigured()) return;
+  const ref = onboardingCol();
+  if (!ref) return;
+
+  try {
+    await deleteDoc(doc(ref, taskId));
+    onboardingState = onboardingState.filter((t) => t.id !== taskId);
+    emit();
+  } catch (e) {
+    console.error("Failed to delete onboarding task:", e);
+  }
+}
+
+export function getOnboardingTasksForCandidate(candidateId: string): OnboardingTask[] {
+  return onboardingState.filter((t) => t.candidateId === candidateId);
+}

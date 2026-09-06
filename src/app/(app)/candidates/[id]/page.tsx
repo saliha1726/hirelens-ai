@@ -15,8 +15,8 @@ import {
   Printer,
   Trash2,
 } from "lucide-react";
-import type { ScreeningRecord, RecruiterNote, CandidateTag } from "@/lib/types";
-import { useWorkspace, addNote, deleteNote, editNote, toggleNotePin, addTag, removeTag, setStatus } from "@/lib/client/store";
+import type { ScreeningRecord, RecruiterNote, CandidateTag, Offer, OnboardingTask } from "@/lib/types";
+import { useWorkspace, addNote, deleteNote, editNote, toggleNotePin, addTag, removeTag, setStatus, createOffer, updateOffer, deleteOffer, getOfferForCandidate, createOnboardingTask, updateOnboardingTask, deleteOnboardingTask, getOnboardingTasksForCandidate } from "@/lib/client/store";
 import { ALL_STATUSES } from "@/lib/client/store";
 import { Button, Card, CardContent, EmptyState } from "@/components/ui/primitives";
 import { ScoreRing } from "@/components/ui/score-ring";
@@ -34,6 +34,8 @@ import { TagManager } from "@/components/candidate/tag-manager";
 import { RichNotes } from "@/components/candidate/rich-notes";
 import { CandidateTimeline } from "@/components/candidate/timeline";
 import { ScorecardDisplay } from "@/components/candidate/scorecard";
+import { OfferTracker } from "@/components/candidate/offer-tracker";
+import { OnboardingChecklist } from "@/components/candidate/onboarding-checklist";
 
 export default function CandidateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -227,6 +229,42 @@ function CandidateBody({ candidateId, screenings }: { candidateId: string; scree
           </Card>
 
           <InterviewScheduler candidate={candidate} />
+
+          {/* Offer tracker - show for hired/shortlisted */}
+          {(candidate.status === "hired" || candidate.status === "shortlisted" || candidate.status === "interview") && (
+            <Card>
+              <CardContent className="pt-5">
+                <OfferTracker
+                  offer={getOfferForCandidate(candidate.id)}
+                  onSave={(o) => {
+                    const existing = getOfferForCandidate(candidate.id);
+                    if (existing) {
+                      updateOffer({ ...existing, ...o });
+                    } else {
+                      createOffer({ ...o, candidateId: candidate.id, jobId: candidate.screenings[0]?.jobId ?? "" });
+                    }
+                  }}
+                  onDelete={getOfferForCandidate(candidate.id) ? () => deleteOffer(getOfferForCandidate(candidate.id)!.id) : undefined}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Onboarding checklist - show for hired */}
+          {candidate.status === "hired" && (
+            <Card>
+              <CardContent className="pt-5">
+                <h3 className="mb-2 text-sm font-semibold">Onboarding</h3>
+                <OnboardingChecklist
+                  tasks={getOnboardingTasksForCandidate(candidate.id)}
+                  onAdd={(t) => createOnboardingTask({ ...t, candidateId: candidate.id })}
+                  onUpdate={(t) => updateOnboardingTask(t)}
+                  onDelete={(id) => deleteOnboardingTask(id)}
+                />
+              </CardContent>
+            </Card>
+          )}
+
           <ProfileSection resume={r} />
 
           {/* Timeline */}

@@ -19,11 +19,14 @@ import {
   Settings,
   User,
   ChevronDown,
+  UsersRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
+import { ShortcutsGuide } from "@/components/ui/shortcuts-guide";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { useUser } from "@/lib/hooks/use-user";
 import { signOut } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/config";
@@ -37,6 +40,7 @@ const NAV = [
   { href: "/pipeline", label: "Pipeline", icon: Columns3 },
   { href: "/compare", label: "Compare", icon: GitCompareArrows },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/team", label: "Team", icon: UsersRound },
 ];
 
 export function Logo({ compact = false }: { compact?: boolean }) {
@@ -264,16 +268,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="px-4 pb-24 pt-6 sm:px-6 sm:pb-16 lg:pl-[17.5rem] lg:pr-8">
-        <motion.div
-          key={pathname}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {children}
-        </motion.div>
+        <ErrorBoundary>
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {children}
+          </motion.div>
+        </ErrorBoundary>
       </main>
       <CommandPalette />
+      <ShortcutsGuide />
       <MobileBottomNav />
     </div>
   );
