@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, Users, GitCompareArrows, Download, Trash2, ArrowRight } from "lucide-react";
 import type { ScreeningStatus, CandidateTag } from "@/lib/types";
@@ -22,6 +22,8 @@ export default function CandidatesPage() {
   const [jobFilter, setJobFilter] = useState<string>("all");
   const [sort, setSort] = useState<SortKey>("score");
   const [selected, setSelected] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -71,6 +73,20 @@ export default function CandidatesPage() {
 
   function toggleSelect(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].slice(-2)));
+  }
+
+  if (!mounted) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-4">
+        <div className="h-9 w-64 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+        <div className="h-12 w-full animate-pulse rounded-xl bg-slate-100 dark:bg-slate-900" />
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-900" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -37,6 +37,7 @@ export default function TeamSettingsPage() {
   useEffect(() => {
     if (!user) return;
     loadWorkspaces();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   async function loadWorkspaces() {

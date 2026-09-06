@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Briefcase, Plus, Trash2, FileText } from "lucide-react";
@@ -9,6 +10,21 @@ import { DemoDataManager } from "@/components/workspace/demo-banner";
 
 export default function JobsPage() {
   const ws = useWorkspace();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-4">
+        <div className="h-9 w-64 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-40 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-900" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl">
