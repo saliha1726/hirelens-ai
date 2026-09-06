@@ -110,20 +110,17 @@ export async function getMembers(wsId: string): Promise<WorkspaceMember[]> {
 }
 
 export async function addMember(wsId: string, email: string, role: WorkspaceRole = "recruiter"): Promise<boolean> {
-  if (!isFirebaseConfigured()) return false;
+  if (!isFirebaseConfigured()) { console.error("addMember: Firebase not configured"); return false; }
   const caller = getFirebaseAuth().currentUser;
-  if (!caller) return false;
+  if (!caller) { console.error("addMember: No current user"); return false; }
 
   // Verify caller is admin
   const callerMember = await getDoc(doc(membersCol(wsId), caller.uid));
-  if (!callerMember.exists() || callerMember.data().role !== "admin") return false;
+  if (!callerMember.exists()) { console.error("addMember: Caller member doc not found"); return false; }
+  if (callerMember.data().role !== "admin") { console.error("addMember: Caller is not admin:", callerMember.data().role); return false; }
 
   try {
-    // Look up user by email via a cloud function or direct query
-    // For now, store pending invite that activates when user signs up
     const batch = writeBatch(getFirebaseDb());
-
-    // Store as pending member (will be activated on login)
     batch.set(doc(collection(getFirebaseDb(), `workspaces/${wsId}/invites`), email.replace(/[.#$[\]]/g, "_")), {
       email,
       role,
