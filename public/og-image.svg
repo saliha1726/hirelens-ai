@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630">
+      <stop offset="0%" stop-color="#fff1f2"/>
+      <stop offset="50%" stop-color="#fce7f3"/>
+      <stop offset="100%" stop-color="#fff1f2"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="400" y2="400">
+      <stop offset="0%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative circles -->
+  <circle cx="1050" cy="100" r="200" fill="#f43f5e" opacity="0.06"/>
+  <circle cx="150" cy="530" r="150" fill="#ec4899" opacity="0.06"/>
+  <circle cx="900" cy="500" r="100" fill="#f43f5e" opacity="0.04"/>
+
+  <!-- Logo mark -->
+  <rect x="80" y="80" width="80" height="80" rx="20" fill="url(#accent)"/>
+  <text x="120" y="132" text-anchor="middle" fill="white" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="36">HL</text>
+
+  <!-- Title -->
+  <text x="180" y="130" fill="#0f172a" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="48">HireLens AI</text>
+
+  <!-- Tagline -->
+  <text x="80" y="220" fill="#334155" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="36">Screen resumes smarter.</text>
+  <text x="80" y="270" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="24">AI-powered resume screening with deterministic scoring</text>
+  <text x="80" y="305" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="24">and explainable insights. Screen 100 resumes in minutes.</text>
+
+  <!-- Feature pills -->
+  <rect x="80" y="370" width="180" height="40" rx="20" fill="#f43f5e" opacity="0.1"/>
+  <text x="170" y="396" text-anchor="middle" fill="#e11d48" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14">AI SCORING</text>
+
+  <rect x="280" y="370" width="200" height="40" rx="20" fill="#ec4899" opacity="0.1"/>
+  <text x="380" y="396" text-anchor="middle" fill="#db2777" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14">TEAM COLLABORATION</text>
+
+  <rect x="500" y="370" width="180" height="40" rx="20" fill="#8b5cf6" opacity="0.1"/>
+  <text x="590" y="396" text-anchor="middle" fill="#7c3aed" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14">PIPELINE VIEW</text>
+
+  <rect x="700" y="370" width="200" height="40" rx="20" fill="#06b6d4" opacity="0.1"/>
+  <text x="800" y="396" text-anchor="middle" fill="#0891b2" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="14">PUBLIC JOB BOARD</text>
+
+  <!-- URL bar -->
+  <rect x="0" y="570" width="1200" height="60" fill="#0f172a"/>
+  <text x="80" y="608" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-weight="400" font-size="18">hirelens-ai-black.vercel.app</text>
+</svg>
