@@ -120,9 +120,7 @@ export default function ApplyPage({ params }: PageProps) {
       </header>
 
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
-        <a href={`/jobs/${wsId}`} className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to all jobs
-        </a>
+        <div className="mb-6 h-5" />
 
         {job ? (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>

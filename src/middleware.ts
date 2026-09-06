@@ -5,7 +5,8 @@ const SESSION_COOKIE = "__session";
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
   const isPublicPage =
-    request.nextUrl.pathname.startsWith("/jobs") ||
+    request.nextUrl.pathname.startsWith("/apply") ||
+    request.nextUrl.pathname.startsWith("/jobs-board") ||
     request.nextUrl.pathname === "/";
 
   const isAuthPage =
