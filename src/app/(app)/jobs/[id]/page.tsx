@@ -57,7 +57,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const copyLink = useCallback(() => {
     const wsId = getActiveWorkspaceId();
     if (!wsId || !job) return;
-    const url = `${window.location.origin}/jobs/${wsId}/${job.id}/apply`;
+    const url = `${window.location.origin}/apply/${wsId}/${job.id}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

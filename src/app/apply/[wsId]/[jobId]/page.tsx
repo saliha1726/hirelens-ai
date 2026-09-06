@@ -120,8 +120,6 @@ export default function ApplyPage({ params }: PageProps) {
       </header>
 
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
-        <div className="mb-6 h-5" />
-
         {job ? (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             {/* Job summary card */}
