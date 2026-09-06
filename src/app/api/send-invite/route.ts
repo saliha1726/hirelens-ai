@@ -64,8 +64,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, id: info.messageId });
-  } catch (e) {
-    console.error("Invite email error:", e);
-    return NextResponse.json({ error: "Failed to send invite" }, { status: 500 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("Invite email error:", msg);
+    return NextResponse.json({ error: `Failed to send invite: ${msg}` }, { status: 500 });
   }
 }
