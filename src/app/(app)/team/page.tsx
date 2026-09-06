@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Plus, Trash2, Shield, UserCheck, Eye, Crown, Loader2, ArrowLeft } from "lucide-react";
+import { Users, Plus, Trash2, Shield, UserCheck, Eye, Crown, Loader2, ArrowLeft, Mail, Check, Clock } from "lucide-react";
 import { useUser } from "@/lib/hooks/use-user";
 import {
   createWorkspace,
@@ -11,6 +11,8 @@ import {
   updateMemberRole,
   removeMember,
   deleteWorkspace,
+  getPendingInvites,
+  acceptInvite,
 } from "@/lib/workspace";
 import { setActiveWorkspace } from "@/lib/client/store";
 import type { WorkspaceMember, WorkspaceRole } from "@/lib/types";
@@ -35,6 +37,7 @@ export default function TeamSettingsPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [emailStatus, setEmailStatus] = useState("");
+  const [pendingInvites, setPendingInvites] = useState<{ email: string; role: WorkspaceRole; invitedAt: string }[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -56,6 +59,16 @@ export default function TeamSettingsPage() {
   async function loadMembers(wsId: string) {
     const m = await getMembers(wsId);
     setMembers(m);
+    const invites = await getPendingInvites(wsId);
+    setPendingInvites(invites);
+  }
+
+  async function handleAcceptInvite(wsId: string) {
+    const ok = await acceptInvite(wsId);
+    if (ok) {
+      await loadWorkspaces();
+      await loadMembers(wsId);
+    }
   }
 
   async function handleCreateWorkspace() {
@@ -289,6 +302,36 @@ export default function TeamSettingsPage() {
           </Card>
 
           {/* Danger zone */}
+
+          {/* Pending Invites */}
+          {pendingInvites.length > 0 && (
+            <Card>
+              <CardContent className="pt-5">
+                <h2 className="mb-3 text-sm font-semibold flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-brand-500" /> Pending Invites ({pendingInvites.length})
+                </h2>
+                <div className="space-y-2">
+                  {pendingInvites.map((inv) => (
+                    <div key={inv.email} className="flex items-center gap-3 rounded-xl border border-dashed border-brand-200 bg-brand-50/50 p-3 dark:border-brand-800 dark:bg-brand-950/20">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/50 dark:text-brand-400">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{inv.email}</p>
+                        <p className="text-xs text-slate-400">
+                          Invited as <span className="capitalize">{inv.role}</span> · {new Date(inv.invitedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-medium text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full dark:bg-amber-950/50 dark:text-amber-400">
+                        Pending
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {isAdmin && (
             <Card className="border-rose-200 dark:border-rose-900">
               <CardContent className="pt-5">

@@ -253,6 +253,18 @@ export async function deleteWorkspace(wsId: string): Promise<boolean> {
   }
 }
 
+export async function getPendingInvites(wsId: string): Promise<{ email: string; role: WorkspaceRole; invitedAt: string }[]> {
+  if (!isFirebaseConfigured()) return [];
+  try {
+    const snap = await getDocs(collection(getFirebaseDb(), `workspaces/${wsId}/invites`));
+    return snap.docs
+      .map((d) => d.data() as { email: string; role: WorkspaceRole; invitedAt: string; status: string })
+      .filter((i) => i.status === "pending");
+  } catch {
+    return [];
+  }
+}
+
 export async function checkRole(wsId: string): Promise<WorkspaceRole | null> {
   if (!isFirebaseConfigured()) return null;
   const user = getFirebaseAuth().currentUser;
