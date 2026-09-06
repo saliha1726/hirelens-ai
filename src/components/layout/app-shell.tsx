@@ -27,6 +27,7 @@ import { CommandPalette } from "@/components/ui/command-palette";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { ShortcutsGuide } from "@/components/ui/shortcuts-guide";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 import { useUser } from "@/lib/hooks/use-user";
 import { signOut } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/config";
@@ -255,6 +256,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Logo compact />
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <WorkspaceSwitcher />
           <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 sm:inline-flex dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-500/25">
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />

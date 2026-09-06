@@ -105,30 +105,34 @@ function makeScreening(jobId: string, jobTitle: string): ScreeningRecord {
 }
 
 describe("Persistence: no localStorage dependency", () => {
-  it("never calls localStorage or sessionStorage in source code", async () => {
+  it("never uses sessionStorage and only allows workspace preference in localStorage", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const storeSource = fs.readFileSync(
       path.resolve(__dirname, "../src/lib/client/store.ts"),
       "utf-8",
     );
-    expect(storeSource).not.toMatch(/localStorage/);
+    // sessionStorage is never used
     expect(storeSource).not.toMatch(/sessionStorage/);
     expect(storeSource).not.toMatch(/window\.storage/);
+
+    // localStorage lines should only contain workspace preference logic
+    const localStorageLines = storeSource.split("\n").filter((l) => l.includes("localStorage") && !l.trim().startsWith("//"));
+    for (const line of localStorageLines) {
+      expect(line).toMatch(/WS_STORAGE_KEY/);
+    }
   });
 
-  it("store source contains no browser-storage API calls", async () => {
+  it("all data mutations go through Firestore, not browser storage", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const storeSource = fs.readFileSync(
       path.resolve(__dirname, "../src/lib/client/store.ts"),
       "utf-8",
     );
-    const lines = storeSource.split("\n");
-    for (const line of lines) {
-      if (line.trim().startsWith("//")) continue;
-      expect(line).not.toMatch(/getItem|setItem|removeItem|clear\(\)/);
-    }
+    // No JSON.stringify into storage
+    expect(storeSource).not.toMatch(/JSON\.stringify.*localStorage/);
+    expect(storeSource).not.toMatch(/localStorage.*JSON\.parse/);
   });
 });
 

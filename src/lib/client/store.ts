@@ -49,6 +49,31 @@ const listeners = new Set<() => void>();
 let hydrated = false;
 let unsubscribers: (() => void)[] = [];
 let firestoreReady = false;
+let activeWorkspaceId: string | null = null;
+
+const WS_STORAGE_KEY = "hirelens_active_workspace";
+
+/* ───────────────────────── Workspace switching ───────────────────────── */
+
+export function getActiveWorkspaceId(): string | null {
+  return activeWorkspaceId;
+}
+
+export function setActiveWorkspace(wsId: string) {
+  activeWorkspaceId = wsId;
+  try { localStorage.setItem(WS_STORAGE_KEY, wsId); } catch {}
+  // Reset state and re-subscribe
+  state = { jobs: [], candidates: [], activity: [] };
+  offersState = [];
+  onboardingState = [];
+  firestoreReady = false;
+  unsubscribers.forEach((unsub) => unsub());
+  unsubscribers = [];
+  emit();
+  if (getUid()) {
+    subscribeToFirestore();
+  }
+}
 
 /* ───────────────────────── Firestore helpers ───────────────────────── */
 
@@ -62,22 +87,26 @@ function getUid(): string | null {
   }
 }
 
+function getWsId(): string {
+  return activeWorkspaceId ?? getUid() ?? "";
+}
+
 function jobsCol() {
-  const uid = getUid();
-  if (!uid) return null;
-  return collection(getFirebaseDb(), `workspaces/${uid}/jobs`);
+  const wsId = getWsId();
+  if (!wsId) return null;
+  return collection(getFirebaseDb(), `workspaces/${wsId}/jobs`);
 }
 
 function candidatesCol() {
-  const uid = getUid();
-  if (!uid) return null;
-  return collection(getFirebaseDb(), `workspaces/${uid}/candidates`);
+  const wsId = getWsId();
+  if (!wsId) return null;
+  return collection(getFirebaseDb(), `workspaces/${wsId}/candidates`);
 }
 
 function activityCol() {
-  const uid = getUid();
-  if (!uid) return null;
-  return collection(getFirebaseDb(), `workspaces/${uid}/activity`);
+  const wsId = getWsId();
+  if (!wsId) return null;
+  return collection(getFirebaseDb(), `workspaces/${wsId}/activity`);
 }
 
 /* ───────────────────────── State management ───────────────────────── */
@@ -94,7 +123,17 @@ function hydrate() {
   state = { jobs: [], candidates: [], activity: [] };
   hydrated = true;
 
+  // Restore active workspace from localStorage
+  try {
+    const saved = localStorage.getItem(WS_STORAGE_KEY);
+    if (saved) activeWorkspaceId = saved;
+  } catch {}
+
   if (getUid()) {
+    // If no workspace set, default to personal (user UID)
+    if (!activeWorkspaceId) {
+      activeWorkspaceId = getUid();
+    }
     subscribeToFirestore();
   }
 }
@@ -653,15 +692,15 @@ let offersState: Offer[] = [];
 let onboardingState: OnboardingTask[] = [];
 
 function offersCol() {
-  const uid = getUid();
-  if (!uid) return null;
-  return collection(getFirebaseDb(), `workspaces/${uid}/offers`);
+  const wsId = getWsId();
+  if (!wsId) return null;
+  return collection(getFirebaseDb(), `workspaces/${wsId}/offers`);
 }
 
 function onboardingCol() {
-  const uid = getUid();
-  if (!uid) return null;
-  return collection(getFirebaseDb(), `workspaces/${uid}/onboarding`);
+  const wsId = getWsId();
+  if (!wsId) return null;
+  return collection(getFirebaseDb(), `workspaces/${wsId}/onboarding`);
 }
 
 export function getOffers(): Offer[] {

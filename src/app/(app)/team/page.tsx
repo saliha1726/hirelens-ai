@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Plus, Trash2, Shield, UserCheck, Eye, Crown, Loader2 } from "lucide-react";
+import { Users, Plus, Trash2, Shield, UserCheck, Eye, Crown, Loader2, ArrowLeft } from "lucide-react";
 import { useUser } from "@/lib/hooks/use-user";
 import {
   createWorkspace,
@@ -12,6 +12,7 @@ import {
   removeMember,
   deleteWorkspace,
 } from "@/lib/workspace";
+import { setActiveWorkspace } from "@/lib/client/store";
 import type { WorkspaceMember, WorkspaceRole } from "@/lib/types";
 import { Card, CardContent, Button } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
@@ -128,10 +129,28 @@ export default function TeamSettingsPage() {
         <CardContent className="pt-5">
           <h2 className="mb-3 text-sm font-semibold">Workspaces</h2>
           <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                const uid = user?.uid;
+                if (uid) {
+                  setActiveWs(uid);
+                  setActiveWorkspace(uid);
+                  loadMembers(uid);
+                }
+              }}
+              className={cn(
+                "rounded-xl border px-4 py-2 text-sm font-medium transition-colors",
+                activeWs === user?.uid
+                  ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-600 dark:bg-brand-950/50 dark:text-brand-300"
+                  : "border-slate-200 hover:border-brand-300 dark:border-slate-700",
+              )}
+            >
+              Personal
+            </button>
             {workspaces.map((ws) => (
               <button
                 key={ws.wsId}
-                onClick={() => { setActiveWs(ws.wsId); loadMembers(ws.wsId); }}
+                onClick={() => { setActiveWs(ws.wsId); setActiveWorkspace(ws.wsId); loadMembers(ws.wsId); }}
                 className={cn(
                   "rounded-xl border px-4 py-2 text-sm font-medium transition-colors",
                   activeWs === ws.wsId
