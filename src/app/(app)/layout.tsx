@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppShell } from "@/components/layout/app-shell";
 
 export const metadata: Metadata = {
   robots: {
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <AppShell>{children}</AppShell>;
 }
