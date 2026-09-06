@@ -18,12 +18,14 @@ export function RichNotes({
   onEdit,
   onDelete,
   onTogglePin,
+  readonly,
 }: {
   notes: RecruiterNote[];
   onAdd: (text: string, type: RecruiterNote["type"]) => void;
   onEdit: (noteId: string, text: string) => void;
   onDelete: (noteId: string) => void;
   onTogglePin: (noteId: string) => void;
+  readonly?: boolean;
 }) {
   const [text, setText] = useState("");
   const [type, setType] = useState<RecruiterNote["type"]>("general");
@@ -51,31 +53,33 @@ export function RichNotes({
 
   return (
     <div>
-      <div className="flex gap-2">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          placeholder="Add a note..."
-          className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-brand-400 dark:border-slate-700 dark:bg-slate-900"
-        />
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as RecruiterNote["type"])}
-          className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs dark:border-slate-700 dark:bg-slate-900"
-        >
-          {NOTE_TYPES.map((nt) => (
-            <option key={nt.value} value={nt.value}>{nt.label}</option>
-          ))}
-        </select>
-        <button
-          onClick={handleAdd}
-          disabled={!text.trim()}
-          className="rounded-xl bg-brand-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-40"
-        >
-          Add
-        </button>
-      </div>
+      {!readonly && (
+        <div className="flex gap-2">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            placeholder="Add a note..."
+            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-brand-400 dark:border-slate-700 dark:bg-slate-900"
+          />
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as RecruiterNote["type"])}
+            className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs dark:border-slate-700 dark:bg-slate-900"
+          >
+            {NOTE_TYPES.map((nt) => (
+              <option key={nt.value} value={nt.value}>{nt.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleAdd}
+            disabled={!text.trim()}
+            className="rounded-xl bg-brand-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+      )}
 
       <div className="mt-3 space-y-2">
         {sorted.length === 0 && (
@@ -126,7 +130,7 @@ export function RichNotes({
                     {note.updatedAt && <span>(edited)</span>}
                   </div>
                 </div>
-                {!isEditing && (
+                {!isEditing && !readonly && (
                   <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       onClick={() => onTogglePin(note.id)}

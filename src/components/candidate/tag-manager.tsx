@@ -22,10 +22,12 @@ export function TagManager({
   tags,
   onAdd,
   onRemove,
+  readonly,
 }: {
   tags: CandidateTag[];
   onAdd: (tag: CandidateTag) => void;
   onRemove: (tagId: string) => void;
+  readonly?: boolean;
 }) {
   const [showPicker, setShowPicker] = useState(false);
   const [newTagName, setNewTagName] = useState("");
@@ -47,13 +49,15 @@ export function TagManager({
           style={{ backgroundColor: tag.color }}
         >
           {tag.name}
-          <button onClick={() => onRemove(tag.id)} className="ml-0.5 hover:opacity-70">
-            <X className="h-3 w-3" />
-          </button>
+          {!readonly && (
+            <button onClick={() => onRemove(tag.id)} className="ml-0.5 hover:opacity-70">
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </span>
       ))}
 
-      {showPicker ? (
+      {!readonly && (showPicker ? (
         <div className="relative">
           <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
             <input
@@ -92,7 +96,7 @@ export function TagManager({
         >
           <Plus className="h-3 w-3" /> Tag
         </button>
-      )}
-    </div>
+      ))}
+      </div>
   );
 }

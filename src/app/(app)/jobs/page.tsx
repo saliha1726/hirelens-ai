@@ -5,11 +5,13 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Briefcase, Plus, Trash2, FileText } from "lucide-react";
 import { useWorkspace, deleteJob } from "@/lib/client/store";
+import { useRole } from "@/lib/hooks/use-role";
 import { ButtonLink, Card, CardContent, EmptyState } from "@/components/ui/primitives";
 import { DemoDataManager } from "@/components/workspace/demo-banner";
 
 export default function JobsPage() {
   const ws = useWorkspace();
+  const { isViewer } = useRole();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -36,9 +38,11 @@ export default function JobsPage() {
             Saved job requirements extracted by HireLens.
           </p>
         </div>
-        <ButtonLink href="/screen">
-          <Plus className="h-4 w-4" /> Add via screening
-        </ButtonLink>
+        {!isViewer && (
+          <ButtonLink href="/screen">
+            <Plus className="h-4 w-4" /> Add via screening
+          </ButtonLink>
+        )}
       </div>
 
       {ws.jobs.length === 0 ? (
@@ -56,18 +60,20 @@ export default function JobsPage() {
               <motion.div key={job.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                 <Card className="card-hover group relative h-full">
                   <CardContent className="pt-5">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm(`Delete "${job.title}"? This cannot be undone.`)) {
-                          deleteJob(job.id);
-                        }
-                      }}
-                      aria-label={`Delete ${job.title}`}
-                      className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 group-hover:opacity-100 dark:hover:bg-rose-950/40"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {!isViewer && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Delete "${job.title}"? This cannot be undone.`)) {
+                            deleteJob(job.id);
+                          }
+                        }}
+                        aria-label={`Delete ${job.title}`}
+                        className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 group-hover:opacity-100 dark:hover:bg-rose-950/40"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                     <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/15 to-violet-500/15 text-brand-600 dark:text-brand-400">
                       <Briefcase className="h-5 w-5" />
                     </span>

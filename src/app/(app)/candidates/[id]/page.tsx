@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { ScreeningRecord, RecruiterNote, CandidateTag, Offer, OnboardingTask } from "@/lib/types";
 import { useWorkspace, addNote, deleteNote, editNote, toggleNotePin, addTag, removeTag, setStatus, createOffer, updateOffer, deleteOffer, getOfferForCandidate, createOnboardingTask, updateOnboardingTask, deleteOnboardingTask, getOnboardingTasksForCandidate } from "@/lib/client/store";
+import { useRole } from "@/lib/hooks/use-role";
 import { ALL_STATUSES } from "@/lib/client/store";
 import { Button, Card, CardContent, EmptyState } from "@/components/ui/primitives";
 import { ScoreRing } from "@/components/ui/score-ring";
@@ -40,6 +41,7 @@ import { OnboardingChecklist } from "@/components/candidate/onboarding-checklist
 export default function CandidateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const ws = useWorkspace();
+  const { isViewer } = useRole();
   const candidate = ws.candidates.find((c) => c.id === id);
 
   if (!candidate) {
@@ -92,16 +94,22 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
             </div>
           </div>
           <div className="flex items-center gap-2 pb-1 no-print">
-            <select
-              value={candidate.status}
-              onChange={(e) => setStatus(candidate.id, e.target.value as (typeof ALL_STATUSES)[number])}
-              aria-label="Pipeline status"
-              className="focus-ring rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm capitalize dark:border-slate-700 dark:bg-slate-900"
-            >
-              {ALL_STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+            {!isViewer ? (
+              <select
+                value={candidate.status}
+                onChange={(e) => setStatus(candidate.id, e.target.value as (typeof ALL_STATUSES)[number])}
+                aria-label="Pipeline status"
+                className="focus-ring rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm capitalize dark:border-slate-700 dark:bg-slate-900"
+              >
+                {ALL_STATUSES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium capitalize dark:border-slate-700 dark:bg-slate-800">
+                {candidate.status}
+              </span>
+            )}
             <Button variant="outline" size="md" onClick={() => exportCandidatePDF(candidate, ws.jobs)}>
               <FileText className="h-4 w-4" />
             </Button>
@@ -113,7 +121,7 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
       </Card>
 
       {/* Job switcher + detail */}
-      {candidate.screenings.length > 0 && <CandidateBody candidateId={candidate.id} screenings={candidate.screenings} />}
+      {candidate.screenings.length > 0 && <CandidateBody candidateId={candidate.id} screenings={candidate.screenings} readonly={isViewer} />}
     </div>
   );
 }
@@ -129,7 +137,7 @@ function ButtonLink({ href, children }: { href: string; children: React.ReactNod
   );
 }
 
-function CandidateBody({ candidateId, screenings }: { candidateId: string; screenings: ScreeningRecord[] }) {
+function CandidateBody({ candidateId, screenings, readonly }: { candidateId: string; screenings: ScreeningRecord[]; readonly?: boolean }) {
   const ws = useWorkspace();
   const candidate = ws.candidates.find((c) => c.id === candidateId)!;
   const [activeJobId, setActiveJobId] = useState(screenings[0]?.jobId ?? "");
@@ -211,7 +219,7 @@ function CandidateBody({ candidateId, screenings }: { candidateId: string; scree
             </CardContent>
           </Card>
 
-          <NotesSection candidateId={candidate.id} notes={candidate.notes} />
+          <NotesSection candidateId={candidate.id} notes={candidate.notes} readonly={readonly} />
         </div>
 
         {/* Side column */}
@@ -224,11 +232,12 @@ function CandidateBody({ candidateId, screenings }: { candidateId: string; scree
                 tags={candidate.tags}
                 onAdd={(tag) => addTag(candidate.id, tag)}
                 onRemove={(tagId) => removeTag(candidate.id, tagId)}
+                readonly={readonly}
               />
             </CardContent>
           </Card>
 
-          <InterviewScheduler candidate={candidate} />
+          <InterviewScheduler candidate={candidate} readonly={readonly} />
 
           {/* Offer tracker - show for hired/shortlisted */}
           {(candidate.status === "hired" || candidate.status === "shortlisted" || candidate.status === "interview") && (
@@ -245,6 +254,7 @@ function CandidateBody({ candidateId, screenings }: { candidateId: string; scree
                     }
                   }}
                   onDelete={getOfferForCandidate(candidate.id) ? () => deleteOffer(getOfferForCandidate(candidate.id)!.id) : undefined}
+                  readonly={readonly}
                 />
               </CardContent>
             </Card>
@@ -260,6 +270,7 @@ function CandidateBody({ candidateId, screenings }: { candidateId: string; scree
                   onAdd={(t) => createOnboardingTask({ ...t, candidateId: candidate.id })}
                   onUpdate={(t) => updateOnboardingTask(t)}
                   onDelete={(id) => deleteOnboardingTask(id)}
+                  readonly={readonly}
                 />
               </CardContent>
             </Card>
@@ -387,9 +398,11 @@ function ProfileSection({ resume }: { resume: ReturnType<typeof useWorkspace>["c
 function NotesSection({
   candidateId,
   notes,
+  readonly,
 }: {
   candidateId: string;
   notes: RecruiterNote[];
+  readonly?: boolean;
 }) {
   return (
     <Card className="no-print">
@@ -401,6 +414,7 @@ function NotesSection({
           onEdit={(noteId, text) => editNote(candidateId, noteId, text)}
           onDelete={(noteId) => deleteNote(candidateId, noteId)}
           onTogglePin={(noteId) => toggleNotePin(candidateId, noteId)}
+          readonly={readonly}
         />
       </CardContent>
     </Card>

@@ -16,7 +16,7 @@ const INTERVIEW_TYPES = [
 
 const DURATIONS = [15, 30, 45, 60, 90, 120];
 
-export function InterviewScheduler({ candidate }: { candidate: Candidate }) {
+export function InterviewScheduler({ candidate, readonly }: { candidate: Candidate; readonly?: boolean }) {
   const ws = useWorkspace();
   const [showForm, setShowForm] = useState(false);
   const [date, setDate] = useState("");
@@ -62,9 +62,11 @@ export function InterviewScheduler({ candidate }: { candidate: Candidate }) {
       <CardContent className="pt-5">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Interviews</h3>
-          <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Schedule
-          </Button>
+          {!readonly && (
+            <Button size="sm" variant="outline" onClick={() => setShowForm(!showForm)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Schedule
+            </Button>
+          )}
         </div>
 
         {showForm && (
@@ -146,7 +148,7 @@ export function InterviewScheduler({ candidate }: { candidate: Candidate }) {
           <div className="mt-3 space-y-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Upcoming</p>
             {upcoming.map((interview) => (
-              <InterviewRow key={interview.id} interview={interview} onDelete={handleDelete} />
+              <InterviewRow key={interview.id} interview={interview} onDelete={handleDelete} readonly={readonly} />
             ))}
           </div>
         )}
@@ -155,7 +157,7 @@ export function InterviewScheduler({ candidate }: { candidate: Candidate }) {
           <div className="mt-3 space-y-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Past</p>
             {past.map((interview) => (
-              <InterviewRow key={interview.id} interview={interview} onDelete={handleDelete} isPast />
+              <InterviewRow key={interview.id} interview={interview} onDelete={handleDelete} isPast readonly={readonly} />
             ))}
           </div>
         )}
@@ -168,10 +170,12 @@ function InterviewRow({
   interview,
   onDelete,
   isPast,
+  readonly,
 }: {
   interview: Interview;
   onDelete: (id: string) => void;
   isPast?: boolean;
+  readonly?: boolean;
 }) {
   const typeInfo = INTERVIEW_TYPES.find((t) => t.value === interview.type) ?? INTERVIEW_TYPES[1];
   const Icon = typeInfo.icon;
@@ -204,12 +208,14 @@ function InterviewRow({
             Scored
           </span>
         )}
-        <button
-          onClick={() => onDelete(interview.id)}
-          className="rounded-lg p-1.5 text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        {!readonly && (
+          <button
+            onClick={() => onDelete(interview.id)}
+            className="rounded-lg p-1.5 text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
     </div>
   );

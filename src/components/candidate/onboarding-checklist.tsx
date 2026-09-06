@@ -22,11 +22,13 @@ export function OnboardingChecklist({
   onAdd,
   onUpdate,
   onDelete,
+  readonly,
 }: {
   tasks: OnboardingTask[];
   onAdd: (task: Omit<OnboardingTask, "id" | "createdAt">) => void;
   onUpdate: (task: OnboardingTask) => void;
   onDelete: (taskId: string) => void;
+  readonly?: boolean;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -86,9 +88,15 @@ export function OnboardingChecklist({
           const isOverdue = task.dueDate && task.status !== "completed" && new Date(task.dueDate) < new Date();
           return (
             <div key={task.id} className={cn("group flex items-start gap-2.5 rounded-xl p-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50", task.status === "completed" && "opacity-60")}>
-              <button onClick={() => cycleStatus(task)} className={cn("mt-0.5 rounded-full border-2 p-0.5 transition-colors", STATUS_COLORS[task.status])}>
-                <Icon className="h-3 w-3" />
-              </button>
+              {!readonly ? (
+                <button onClick={() => cycleStatus(task)} className={cn("mt-0.5 rounded-full border-2 p-0.5 transition-colors", STATUS_COLORS[task.status])}>
+                  <Icon className="h-3 w-3" />
+                </button>
+              ) : (
+                <span className={cn("mt-0.5 rounded-full border-2 p-0.5", STATUS_COLORS[task.status])}>
+                  <Icon className="h-3 w-3" />
+                </span>
+              )}
               <div className="min-w-0 flex-1">
                 <p className={cn("text-sm font-medium", task.status === "completed" && "line-through text-slate-400")}>{task.title}</p>
                 {task.description && <p className="text-xs text-slate-400">{task.description}</p>}
@@ -98,15 +106,18 @@ export function OnboardingChecklist({
                   </span>
                 )}
               </div>
-              <button onClick={() => onDelete(task.id)} className="shrink-0 rounded-lg p-1 text-slate-300 opacity-0 transition-opacity hover:text-rose-500 group-hover:opacity-100">
-                <Trash2 className="h-3 w-3" />
-              </button>
+              {!readonly && (
+                <button onClick={() => onDelete(task.id)} className="shrink-0 rounded-lg p-1 text-slate-300 opacity-0 transition-opacity hover:text-rose-500 group-hover:opacity-100">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
             </div>
           );
         })}
       </div>
 
-      {showForm ? (
+      {!readonly && (
+        showForm ? (
         <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50/30 p-3 dark:border-brand-800">
           <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAdd()} placeholder="Task title" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-900" />
           <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-brand-400 dark:border-slate-700 dark:bg-slate-900" />
@@ -120,7 +131,7 @@ export function OnboardingChecklist({
         <button onClick={() => setShowForm(true)} className="mt-2 flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 py-2 text-xs text-slate-400 transition-colors hover:border-brand-400 hover:text-brand-500">
           <Plus className="h-3 w-3" /> Add task
         </button>
-      )}
+      ))}
     </div>
   );
 }

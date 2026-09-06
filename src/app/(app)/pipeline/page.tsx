@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { GripVertical, Link as LinkIcon } from "lucide-react";
 import { useWorkspace, setStatus } from "@/lib/client/store";
+import { useRole } from "@/lib/hooks/use-role";
 import { Card, EmptyState } from "@/components/ui/primitives";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { StatusBadge } from "@/components/candidate/match-views";
@@ -22,6 +23,7 @@ const COLUMNS: { status: ScreeningStatus; label: string; color: string; dot: str
 
 export default function PipelinePage() {
   const ws = useWorkspace();
+  const { isViewer } = useRole();
   const [mounted, setMounted] = useState(false);
   const [dragOverCol, setDragOverCol] = useState<ScreeningStatus | null>(null);
   useEffect(() => setMounted(true), []);
@@ -100,9 +102,9 @@ export default function PipelinePage() {
         {COLUMNS.map((col) => (
           <div
             key={col.status}
-            onDragOver={(e) => handleDragOver(e, col.status)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, col.status)}
+            onDragOver={isViewer ? undefined : (e) => handleDragOver(e, col.status)}
+            onDragLeave={isViewer ? undefined : handleDragLeave}
+            onDrop={isViewer ? undefined : (e) => handleDrop(e, col.status)}
             className={`flex flex-col rounded-2xl border-2 border-dashed p-3 transition-colors min-h-[200px] ${
               dragOverCol === col.status
                 ? "border-brand-400 bg-brand-50/50 dark:border-brand-500 dark:bg-brand-950/20"
@@ -120,11 +122,12 @@ export default function PipelinePage() {
             </div>
 
             <div className="flex flex-1 flex-col gap-2">
-              {grouped[col.status].map((candidate) => (
+                {grouped[col.status].map((candidate) => (
                 <PipelineCard
                   key={candidate.id}
                   candidate={candidate}
                   onDragStart={handleDragStart}
+                  isViewer={isViewer}
                 />
               ))}
             </div>
@@ -138,9 +141,11 @@ export default function PipelinePage() {
 function PipelineCard({
   candidate,
   onDragStart,
+  isViewer,
 }: {
   candidate: Candidate;
   onDragStart: (e: React.DragEvent, id: string) => void;
+  isViewer: boolean;
 }) {
   const name = candidate.resume.name ?? titleCaseName(candidate.fileName);
   const bestScreening = candidate.screenings.reduce<null | (typeof candidate.screenings)[number]>((acc, s) =>
@@ -153,9 +158,9 @@ function PipelineCard({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      draggable
-      onDragStart={(e) => onDragStart(e as unknown as React.DragEvent, candidate.id)}
-      className="group cursor-grab rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-brand-300 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-800 dark:hover:border-brand-500"
+      draggable={!isViewer}
+      onDragStart={isViewer ? undefined : (e) => onDragStart(e as unknown as React.DragEvent, candidate.id)}
+      className={`group rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-brand-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-brand-500 ${isViewer ? "" : "cursor-grab active:cursor-grabbing"}`}
     >
       <div className="flex items-start gap-2.5">
         <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500/15 to-violet-500/15 text-[10px] font-bold text-brand-700 dark:text-brand-300">

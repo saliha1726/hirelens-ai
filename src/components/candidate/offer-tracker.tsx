@@ -20,10 +20,12 @@ export function OfferTracker({
   offer,
   onSave,
   onDelete,
+  readonly,
 }: {
   offer?: Offer;
   onSave: (offer: Omit<Offer, "id" | "createdAt" | "updatedAt">) => void;
   onDelete?: () => void;
+  readonly?: boolean;
 }) {
   const [editing, setEditing] = useState(!offer);
   const [status, setStatus] = useState<OfferStatus>(offer?.status ?? "draft");
@@ -47,6 +49,8 @@ export function OfferTracker({
     setEditing(false);
   }
 
+  if (readonly && !offer) return null;
+
   if (!editing && offer) {
     const statusInfo = STATUSES.find((s) => s.value === offer.status) ?? STATUSES[0];
     return (
@@ -60,13 +64,17 @@ export function OfferTracker({
             <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", statusInfo.color)}>
               {statusInfo.label}
             </span>
-            <button onClick={() => setEditing(true)} className="rounded-lg p-1 text-slate-400 hover:text-blue-500">
-              <Edit3 className="h-3.5 w-3.5" />
-            </button>
-            {onDelete && (
-              <button onClick={onDelete} className="rounded-lg p-1 text-slate-400 hover:text-rose-500">
-                <X className="h-3.5 w-3.5" />
-              </button>
+            {!readonly && (
+              <>
+                <button onClick={() => setEditing(true)} className="rounded-lg p-1 text-slate-400 hover:text-blue-500">
+                  <Edit3 className="h-3.5 w-3.5" />
+                </button>
+                {onDelete && (
+                  <button onClick={onDelete} className="rounded-lg p-1 text-slate-400 hover:text-rose-500">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

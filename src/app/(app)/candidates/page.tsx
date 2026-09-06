@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, Users, GitCompareArrows, Download, Trash2, ArrowRight } from "lucide-react";
 import type { ScreeningStatus, CandidateTag } from "@/lib/types";
 import { useWorkspace, bulkUpdateStatus, bulkAddTag, bulkDelete } from "@/lib/client/store";
+import { useRole } from "@/lib/hooks/use-role";
 import { ALL_STATUSES } from "@/lib/client/store";
 import { Button, ButtonLink, Card, EmptyState } from "@/components/ui/primitives";
 import { CandidateRow } from "@/components/candidate/candidate-card";
@@ -17,6 +18,7 @@ type SortKey = "score" | "name" | "recent" | "experience";
 
 export default function CandidatesPage() {
   const ws = useWorkspace();
+  const { isViewer } = useRole();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ScreeningStatus | "all">("all");
   const [jobFilter, setJobFilter] = useState<string>("all");
@@ -99,7 +101,7 @@ export default function CandidatesPage() {
             {ws.candidates.length} in your workspace · search, filter and rank.
           </p>
         </div>
-        {selected.length === 2 && (
+        {selected.length === 2 && !isViewer && (
           <ButtonLink href={`/compare?a=${selected[0]}&b=${selected[1]}`}>
             <GitCompareArrows className="h-4 w-4" /> Compare ({selected.length})
           </ButtonLink>
@@ -166,7 +168,7 @@ export default function CandidatesPage() {
       </Card>
 
       {/* Bulk actions bar */}
-      {selected.length > 0 && (
+      {!isViewer && selected.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-950/30">
           <span className="text-sm font-medium text-brand-700 dark:text-brand-300">
             {selected.length} selected
@@ -235,16 +237,18 @@ export default function CandidatesPage() {
                 screening={jobMatch ?? best ?? undefined}
                 rank={sort === "score" ? i + 1 : undefined}
               />
-              <label className="absolute right-4 top-4 hidden cursor-pointer items-center gap-1.5 text-[11px] font-medium text-slate-400 sm:flex">
-                <input
-                  type="checkbox"
-                  checked={selected.includes(candidate.id)}
-                  onChange={() => toggleSelect(candidate.id)}
-                  className="h-3.5 w-3.5 accent-brand-600"
-                  aria-label={`Select ${candidate.resume.name ?? candidate.fileName} for comparison`}
-                />
-                compare
-              </label>
+              {!isViewer && (
+                <label className="absolute right-4 top-4 hidden cursor-pointer items-center gap-1.5 text-[11px] font-medium text-slate-400 sm:flex">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(candidate.id)}
+                    onChange={() => toggleSelect(candidate.id)}
+                    className="h-3.5 w-3.5 accent-brand-600"
+                    aria-label={`Select ${candidate.resume.name ?? candidate.fileName} for comparison`}
+                  />
+                  compare
+                </label>
+              )}
             </StaggerItem>
           ))}
         </StaggerContainer>

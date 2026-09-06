@@ -29,6 +29,8 @@ import { ShortcutsGuide } from "@/components/ui/shortcuts-guide";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 import { useUser } from "@/lib/hooks/use-user";
+import { useRole } from "@/lib/hooks/use-role";
+import type { WorkspaceRole } from "@/lib/types";
 import { signOut } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/config";
 import { useRouter } from "next/navigation";
@@ -192,6 +194,24 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function RoleBadge() {
+  const { role, loading } = useRole();
+  if (loading) return null;
+
+  const config: Record<WorkspaceRole, { label: string; cls: string }> = {
+    admin: { label: "Admin", cls: "bg-amber-100 text-amber-700 ring-amber-600/20 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-500/25" },
+    recruiter: { label: "Recruiter", cls: "bg-blue-100 text-blue-700 ring-blue-600/20 dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-500/25" },
+    viewer: { label: "Viewer", cls: "bg-slate-100 text-slate-600 ring-slate-600/20 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-500/25" },
+  };
+  const { label, cls } = config[role];
+
+  return (
+    <span className={`hidden items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset sm:inline-flex ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -250,6 +270,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <WorkspaceSwitcher />
+          <RoleBadge />
           <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 sm:inline-flex dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-500/25">
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
