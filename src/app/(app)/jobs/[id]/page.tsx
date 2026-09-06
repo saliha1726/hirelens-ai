@@ -1,10 +1,10 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Briefcase, GraduationCap, Award, Gauge, Download, Users, TrendingUp, SlidersHorizontal, RotateCcw, ChevronDown } from "lucide-react";
+import { ArrowLeft, Briefcase, GraduationCap, Award, Gauge, Download, Users, TrendingUp, SlidersHorizontal, RotateCcw, ChevronDown, Link2, Check } from "lucide-react";
 import { motion } from "framer-motion";
-import { useWorkspace, saveJob } from "@/lib/client/store";
+import { useWorkspace, saveJob, getActiveWorkspaceId } from "@/lib/client/store";
 import { Badge, Button, ButtonLink, Card, CardContent, EmptyState } from "@/components/ui/primitives";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { exportCandidatesToCSV } from "@/lib/export-csv";
@@ -65,6 +65,17 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     );
   }
 
+  const [copied, setCopied] = useState(false);
+  const copyLink = useCallback(() => {
+    const wsId = getActiveWorkspaceId();
+    if (!wsId) return;
+    const url = `${window.location.origin}/jobs/${wsId}/${job.id}/apply`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [job.id]);
+
   return (
     <div className="mx-auto max-w-6xl">
       <Link href="/jobs" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-brand-600 dark:text-slate-400">
@@ -82,6 +93,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
               <Download className="h-4 w-4" /> Export CSV
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={copyLink}>
+            {copied ? <><Check className="h-4 w-4" /> Copied!</> : <><Link2 className="h-4 w-4" /> Copy apply link</>}
+          </Button>
           <ButtonLink href="/screen">Screen candidates for this job</ButtonLink>
         </div>
       </div>

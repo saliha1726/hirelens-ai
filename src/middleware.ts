@@ -4,6 +4,10 @@ const SESSION_COOKIE = "__session";
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
+  const isPublicPage =
+    request.nextUrl.pathname.startsWith("/jobs") ||
+    request.nextUrl.pathname === "/";
+
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup") ||
@@ -18,7 +22,7 @@ export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE)?.value;
   const isAuthed = !!sessionCookie && sessionCookie.length > 0;
 
-  if (!isAuthed && !isAuthPage && !isApiRoute && !isPublicAsset && request.nextUrl.pathname !== "/") {
+  if (!isAuthed && !isAuthPage && !isApiRoute && !isPublicAsset && !isPublicPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
