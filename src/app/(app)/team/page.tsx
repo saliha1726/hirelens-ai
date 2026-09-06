@@ -34,6 +34,7 @@ export default function TeamSettingsPage() {
   const [inviteRole, setInviteRole] = useState<WorkspaceRole>("recruiter");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [emailStatus, setEmailStatus] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -74,11 +75,12 @@ export default function TeamSettingsPage() {
   async function handleInvite() {
     if (!inviteEmail.trim() || !activeWs) return;
     setError("");
+    setEmailStatus("Adding member...");
     console.log("Attempting invite:", inviteEmail.trim(), "to workspace:", activeWs);
     const ok = await addMember(activeWs, inviteEmail.trim(), inviteRole);
     console.log("addMember result:", ok);
     if (ok) {
-      // Send invite email
+      setEmailStatus("Member added. Sending invite email...");
       const ws = workspaces.find((w) => w.wsId === activeWs);
       try {
         const res = await fetch("/api/send-invite", {
@@ -93,13 +95,21 @@ export default function TeamSettingsPage() {
         });
         const data = await res.json();
         console.log("Email API response:", data);
+        if (data.error) {
+          setEmailStatus(`Email failed: ${data.error}`);
+        } else {
+          setEmailStatus(`Invite sent! Email ID: ${data.id}`);
+        }
       } catch (e) {
         console.error("Email send failed:", e);
+        setEmailStatus(`Email request failed: ${e}`);
       }
       setInviteEmail("");
       await loadMembers(activeWs);
+      setTimeout(() => setEmailStatus(""), 5000);
     } else {
-      setError("Failed to invite member. Make sure you are an admin.");
+      setEmailStatus("");
+      setError("Failed to invite member. Make sure you are an admin. Check browser console (F12) for details.");
     }
   }
 
@@ -197,6 +207,7 @@ export default function TeamSettingsPage() {
             </Button>
           </div>
           {error && <p className="mt-2 text-xs text-rose-500">{error}</p>}
+          {emailStatus && <p className="mt-2 text-xs text-blue-500">{emailStatus}</p>}
         </CardContent>
       </Card>
 
