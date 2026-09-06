@@ -76,6 +76,22 @@ export default function TeamSettingsPage() {
     setError("");
     const ok = await addMember(activeWs, inviteEmail.trim(), inviteRole);
     if (ok) {
+      // Send invite email
+      const ws = workspaces.find((w) => w.wsId === activeWs);
+      try {
+        await fetch("/api/send-invite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: inviteEmail.trim(),
+            workspaceName: ws?.name ?? "workspace",
+            inviterName: user?.displayName ?? user?.email?.split("@")[0] ?? "A team member",
+            role: inviteRole,
+          }),
+        });
+      } catch {
+        // Email send failed but invite was created
+      }
       setInviteEmail("");
       await loadMembers(activeWs);
     } else {
