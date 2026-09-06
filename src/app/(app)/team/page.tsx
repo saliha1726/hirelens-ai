@@ -74,12 +74,14 @@ export default function TeamSettingsPage() {
   async function handleInvite() {
     if (!inviteEmail.trim() || !activeWs) return;
     setError("");
+    console.log("Attempting invite:", inviteEmail.trim(), "to workspace:", activeWs);
     const ok = await addMember(activeWs, inviteEmail.trim(), inviteRole);
+    console.log("addMember result:", ok);
     if (ok) {
       // Send invite email
       const ws = workspaces.find((w) => w.wsId === activeWs);
       try {
-        await fetch("/api/send-invite", {
+        const res = await fetch("/api/send-invite", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -89,8 +91,10 @@ export default function TeamSettingsPage() {
             role: inviteRole,
           }),
         });
-      } catch {
-        // Email send failed but invite was created
+        const data = await res.json();
+        console.log("Email API response:", data);
+      } catch (e) {
+        console.error("Email send failed:", e);
       }
       setInviteEmail("");
       await loadMembers(activeWs);
