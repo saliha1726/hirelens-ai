@@ -57,7 +57,12 @@ export default function JobsPage() {
                 <Card className="card-hover group relative h-full">
                   <CardContent className="pt-5">
                     <button
-                      onClick={() => deleteJob(job.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Delete "${job.title}"? This cannot be undone.`)) {
+                          deleteJob(job.id);
+                        }
+                      }}
                       aria-label={`Delete ${job.title}`}
                       className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-300 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 group-hover:opacity-100 dark:hover:bg-rose-950/40"
                     >

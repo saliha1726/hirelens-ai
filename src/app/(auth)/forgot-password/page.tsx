@@ -30,7 +30,12 @@ function ForgotPasswordForm() {
       setLocalSuccess("If an account exists with that email, you will receive a password reset link.");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to send reset email";
-      setLocalError(msg.includes("user-not-found") ? "No account found with this email" : msg);
+      setLocalError(
+        msg.includes("user-not-found") ? "No account found with this email"
+        : msg.includes("too-many-requests") ? "Too many attempts. Please try again later."
+        : msg.includes("invalid-email") ? "Please enter a valid email address"
+        : "Failed to send reset email. Please try again."
+      );
     } finally {
       setLoading(false);
     }

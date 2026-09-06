@@ -63,7 +63,8 @@ export default function PipelinePage() {
     return (
       <div className="mx-auto max-w-7xl">
         <div className="mb-6">
-          <div className="h-9 w-64 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+          <div className="h-9 w-48 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+          <div className="mt-2 h-4 w-72 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
         </div>
         <div className="grid grid-cols-6 gap-3">
           {[...Array(6)].map((_, i) => (

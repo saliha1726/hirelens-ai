@@ -89,9 +89,7 @@ export default function TeamSettingsPage() {
     if (!inviteEmail.trim() || !activeWs) return;
     setError("");
     setEmailStatus("Adding member...");
-    console.log("Attempting invite:", inviteEmail.trim(), "to workspace:", activeWs);
     const ok = await addMember(activeWs, inviteEmail.trim(), inviteRole);
-    console.log("addMember result:", ok);
     if (ok) {
       setEmailStatus("Member added. Sending invite email...");
       const ws = workspaces.find((w) => w.wsId === activeWs);
@@ -107,7 +105,6 @@ export default function TeamSettingsPage() {
           }),
         });
         const data = await res.json();
-        console.log("Email API response:", data);
         if (data.error) {
           setEmailStatus(`Email failed: ${data.error}`);
         } else {

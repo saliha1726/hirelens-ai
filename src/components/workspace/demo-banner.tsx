@@ -15,13 +15,22 @@ export function DemoDataManager() {
   const [isEmpty, setIsEmpty] = useState(false);
 
   useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
     const s = getState();
     const empty = s.candidates.length === 0 && s.jobs.length === 0;
     if (empty) {
-      resetWorkspace(buildDemoWorkspace());
+      timeout = setTimeout(() => {
+        const stillEmpty = getState().candidates.length === 0 && getState().jobs.length === 0;
+        if (stillEmpty) {
+          resetWorkspace(buildDemoWorkspace());
+          setIsEmpty(false);
+        }
+        setReady(true);
+      }, 2000);
+    } else {
+      setReady(true);
     }
-    setIsEmpty(getState().candidates.length === 0);
-    setReady(true);
+    return () => clearTimeout(timeout);
   }, []);
 
   if (!ready || !isEmpty) return null;

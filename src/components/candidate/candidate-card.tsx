@@ -68,7 +68,11 @@ export function CandidateRow({
             {matchChips(screening)}
           </div>
         )}
-        <p className="mt-1 text-right text-[11px] text-slate-400">updated {timeAgo(candidate.createdAt)}</p>
+        <p className="mt-1 text-right text-[11px] text-slate-400">updated {timeAgo(
+          candidate.screenings.length > 0
+            ? candidate.screenings[candidate.screenings.length - 1].createdAt
+            : candidate.createdAt
+        )}</p>
       </Link>
     </motion.div>
   );
