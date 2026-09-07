@@ -47,6 +47,8 @@ export default function CandidatesPage() {
         if (!q) return true;
         const hay = [
           candidate.resume.name,
+          candidate.applicantName,
+          candidate.applicantEmail,
           candidate.fileName,
           candidate.resume.email,
           ...candidate.resume.skills.map((s) => s.name),

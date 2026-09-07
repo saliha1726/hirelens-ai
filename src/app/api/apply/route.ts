@@ -4,6 +4,7 @@ import { getAdminFirestore } from "@/lib/firebase/server";
 import { extractText, sanitizeFileName } from "@/lib/parsing/documents";
 import { parseResume } from "@/lib/parsing/resume-parser";
 import { computeMatch } from "@/lib/scoring/engine";
+import { notifyNewApplication } from "./notify";
 import type { JobRequirements } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -102,6 +103,16 @@ export async function POST(req: Request) {
       message: `${fullName} applied for ${job.title} via public link`,
       at: now,
       createdAt: now,
+    });
+
+    // Best-effort email notification to workspace admins (never blocks the response)
+    void notifyNewApplication({
+      wsId,
+      jobTitle: job.title,
+      applicantName: fullName,
+      applicantEmail: email,
+      matchScore: match.overallScore,
+      matchedSkills: match.matchedSkills.length,
     });
 
     return NextResponse.json({

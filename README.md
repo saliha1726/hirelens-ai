@@ -11,11 +11,15 @@ HireLens AI is a decision-support assistant for recruiters: upload resumes again
 ## What it does
 
 - **Screen resumes at scale** — upload up to 10 PDF/DOCX/TXT resumes per run against any job description
-- **Explainable matching** — every score decomposes into weighted factors (required skills 40%, relevant experience 18%, years of experience 12%, preferred skills 10%, education 8%, certifications 6%, keywords 6%)
+- **Explainable matching** — every score decomposes into weighted factors (required skills 40%, relevant experience 18%, years of experience 12%, preferred skills 10%, education 8%, certifications 6%, keywords 6%), with per-job custom weights
 - **Structured resume parsing** — contact info, skills, experience timeline, education, certifications, seniority & industry domains extracted deterministically
 - **Job requirement extraction** — required vs. preferred skills, minimum years, education bar, certifications, seniority target and salient keywords from raw JD text
-- **AI interpretation (Gemini)** — balanced summaries, strengths, concerns and interview focus areas. The AI **never changes scores**; it only interprets the already-computed result
-- **Recruiter workspace** — candidate ranking table, search & filters, detail pages with evidence quotes, side-by-side comparison, notes, pipeline statuses, demo data seeding
+- **AI interpretation (MiMo)** — balanced summaries, strengths, concerns and interview focus areas. The AI **never changes scores**; it only interprets the already-computed result
+- **Cloud sync (Firestore)** — every job, candidate, note, interview, offer and onboarding task persists to Firestore with real-time listeners; works across devices and tabs
+- **Team workspaces** — invite members by email (admin/recruiter/viewer roles), role-gated UI, workspace switcher
+- **Public job board + apply links** — share a public board (`/jobs-board?ws=…`), let candidates apply online (`/apply/{ws}/{job}`) with automatic resume parsing & scoring; admins get email notifications on each application
+- **Hiring pipeline** — Kanban drag-and-drop across 6 stages, interview scheduling, scorecards, offer tracking, onboarding checklists
+- **Analytics** — score distributions, funnel conversion rates, skill-gap analysis, per-job performance, CSV/PDF exports
 - **Hiring-safety by design** — protected characteristics are excluded from scoring inputs and explicitly ignored by the AI layer; resume content is treated as untrusted data, never as instructions
 
 ## Tech stack
@@ -25,16 +29,18 @@ HireLens AI is a decision-support assistant for recruiters: upload resumes again
 | Framework | Next.js 15 (App Router) + React 19 + TypeScript |
 | Styling | Tailwind CSS v3, dark/light theme (`next-themes`) |
 | Animation | Framer Motion |
-| AI | Google Gemini REST API (`gemini-2.5-flash`, server-side only) |
+| Auth & DB | Firebase Auth (email + Google) · Firestore |
+| AI | MiMo (OpenAI-compatible REST API, server-side only) |
+| Email | Nodemailer via Gmail SMTP (invites, application alerts) |
 | Document parsing | `unpdf` (PDF), `mammoth` (DOCX) |
 | Validation | Zod + custom file/magic-byte validation |
-| Tests | Vitest (35+ unit/integration tests) |
+| Tests | Vitest (51 unit/integration tests) |
 
 ## Getting started
 
 ```bash
 npm install
-cp .env.example .env.local   # add your GEMINI_API_KEY (optional but recommended)
+cp .env.example .env.local   # add Firebase + optional AI/email vars
 npm run dev                  # http://localhost:3000
 ```
 
@@ -52,10 +58,13 @@ npm run check       # all of the above
 
 | Variable | Required | Description |
 |---|---|---|
-| `GEMINI_API_KEY` | Optional* | Google Gemini API key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey). Enables AI summaries/insights. |
-| `GEMINI_MODEL` | No | Override the model (default: `gemini-2.5-flash`, fallback: `gemini-2.0-flash`). |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` etc. | Yes | Firebase client config (API key, auth domain, project ID, storage bucket, sender ID, app ID) |
+| `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | Yes (server APIs) | Firebase Admin SDK service account for public apply/jobs endpoints |
+| `MIMO_API_KEY` | Optional* | Enables AI summaries/insights via the MiMo OpenAI-compatible API |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | Optional* | Gmail SMTP for team invites & application notifications |
+| `NEXT_PUBLIC_APP_URL` | No | Public URL used in email links |
 
-\* *Without an API key the app is fully functional except AI-generated qualitative insights — deterministic scoring runs identically and the UI clearly marks AI insights as unavailable.*
+\* *Without these the app is fully functional minus AI insights and email delivery — deterministic scoring runs identically and the UI clearly marks AI insights as unavailable.*
 
 **Never commit `.env.local`.** All secrets stay server-side; no key is ever sent to the browser.
 
@@ -68,9 +77,12 @@ Browser ──multipart──▶ /api/screen (serverless)
                         ├─ parseResume() ──────┐
                         ├─ parseJobDescription() ─┤
                         ├─ computeMatch() ◀───────┘  deterministic, explainable
-                        └─ generateCandidateInsight() → Gemini (interpretation ONLY)
-Client keeps a versioned localStorage workspace (jobs/candidates/notes/status)
-— swappable for a database later via lib/client/store.ts.
+                        └─ generateCandidateInsight() → MiMo (interpretation ONLY)
+
+Client store (lib/client/store.ts)
+  ├─ Firestore per-workspace: workspaces/{wsId}/jobs|candidates|activity|offers|onboarding
+  ├─ Real-time onSnapshot listeners → cross-tab/device sync
+  └─ Public flow: /api/apply (Admin SDK) → candidate + activity + admin email alert
 ```
 
 Full details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · Scoring methodology: [`docs/SCORING.md`](docs/SCORING.md) · Safety: [`docs/SECURITY.md`](docs/SECURITY.md)
@@ -78,7 +90,3 @@ Full details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · Scoring methodol
 ## Responsible use
 
 HireLens AI is **decision support, not decision automation**. Scores measure textual alignment between a resume and a job description — they are a triage aid, not a verdict. See [docs/SECURITY.md](docs/SECURITY.md) for the fairness/safety posture.
-
-## License
-
-MIT.
