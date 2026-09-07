@@ -1,19 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-
-function getAdminDb() {
-  if (getApps().length === 0) {
-    initializeApp({
-      credential: cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      }),
-    });
-  }
-  return getFirestore();
-}
+import { getAdminFirestore } from "@/lib/firebase/server";
 
 export async function GET(req: NextRequest) {
   const wsId = req.nextUrl.searchParams.get("wsId");
@@ -22,7 +8,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const db = getAdminDb();
+    const db = await getAdminFirestore();
     const snap = await db.collection(`workspaces/${wsId}/jobs`).orderBy("createdAt", "desc").get();
     const jobs = snap.docs.map((doc) => {
       const d = doc.data();

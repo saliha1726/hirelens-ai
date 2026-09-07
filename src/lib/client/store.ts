@@ -30,6 +30,10 @@ import type {
   ScreeningRecord,
   ScreeningStatus,
 } from "@/lib/types";
+import type { Offer, OfferStatus, OnboardingTask, OnboardingTaskStatus } from "@/lib/types";
+
+let offersState: Offer[] = [];
+let onboardingState: OnboardingTask[] = [];
 
 /** Stable shared empty state — must never be recreated (useSyncExternalStore). */
 const EMPTY_STATE: WorkspaceState = Object.freeze({
@@ -186,6 +190,7 @@ function subscribeToFirestore() {
           domains: (data.domains as string[]) ?? [],
           responsibilities: (data.responsibilities as string[]) ?? [],
           sourceLength: data.source_length as number | undefined,
+          weightOverrides: (data.weight_overrides as JobRequirements["weightOverrides"]) ?? undefined,
           createdAt: (data.createdAt as string) ?? new Date().toISOString(),
         };
         jobsMap.set(change.doc.id, job);
@@ -215,6 +220,9 @@ function subscribeToFirestore() {
           tags: (data.tags as CandidateTag[]) ?? [],
           status: (data.status as ScreeningStatus) ?? "new",
           createdAt: (data.createdAt as string) ?? new Date().toISOString(),
+          applicantName: data.applicantName as string | undefined,
+          applicantEmail: data.applicantEmail as string | undefined,
+          applicantPhone: data.applicantPhone as string | undefined,
         };
         candMap.set(change.doc.id, candidate);
       }
@@ -241,7 +249,26 @@ function subscribeToFirestore() {
     checkReady();
   });
 
+  const offersRef = offersCol();
+  const onboardingRef = onboardingCol();
+
   unsubscribers = [unsubJobs, unsubCandidates, unsubActivity];
+
+  if (offersRef) {
+    const unsubOffers = onSnapshot(offersRef, (snap) => {
+      offersState = snap.docs.map((d) => d.data() as Offer);
+      notify();
+    });
+    unsubscribers.push(unsubOffers);
+  }
+
+  if (onboardingRef) {
+    const unsubOnboarding = onSnapshot(onboardingRef, (snap) => {
+      onboardingState = snap.docs.map((d) => d.data() as OnboardingTask);
+      notify();
+    });
+    unsubscribers.push(unsubOnboarding);
+  }
 }
 
 function emit() {
@@ -293,6 +320,7 @@ async function writeJob(job: JobRequirements) {
       domains: job.domains,
       responsibilities: job.responsibilities ?? [],
       source_length: job.sourceLength ?? null,
+      weight_overrides: job.weightOverrides ?? null,
       createdAt: job.createdAt,
     });
   } catch (e) {
@@ -325,6 +353,9 @@ async function writeCandidate(candidate: Candidate) {
       tags: candidate.tags,
       status: candidate.status,
       createdAt: candidate.createdAt,
+      applicantName: candidate.applicantName ?? null,
+      applicantEmail: candidate.applicantEmail ?? null,
+      applicantPhone: candidate.applicantPhone ?? null,
     });
   } catch (e) {
     console.error("Failed to write candidate to Firestore:", e);
@@ -685,11 +716,6 @@ export function importScreeningResult(payload: {
 }
 
 /* ───────────────────────── Offer tracking ───────────────────────── */
-
-import type { Offer, OfferStatus, OnboardingTask, OnboardingTaskStatus } from "@/lib/types";
-
-let offersState: Offer[] = [];
-let onboardingState: OnboardingTask[] = [];
 
 function offersCol() {
   const wsId = getWsId();

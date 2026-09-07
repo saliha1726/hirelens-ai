@@ -110,14 +110,14 @@ export async function getMembers(wsId: string): Promise<WorkspaceMember[]> {
 }
 
 export async function addMember(wsId: string, email: string, role: WorkspaceRole = "recruiter"): Promise<boolean> {
-  if (!isFirebaseConfigured()) { console.error("addMember: Firebase not configured"); return false; }
+  if (!isFirebaseConfigured()) return false;
   const caller = getFirebaseAuth().currentUser;
-  if (!caller) { console.error("addMember: No current user"); return false; }
+  if (!caller) return false;
 
   // Verify caller is admin
   const callerMember = await getDoc(doc(membersCol(wsId), caller.uid));
-  if (!callerMember.exists()) { console.error("addMember: Caller member doc not found"); return false; }
-  if (callerMember.data().role !== "admin") { console.error("addMember: Caller is not admin:", callerMember.data().role); return false; }
+  if (!callerMember.exists()) return false;
+  if (callerMember.data().role !== "admin") return false;
 
   try {
     const batch = writeBatch(getFirebaseDb());

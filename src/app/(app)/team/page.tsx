@@ -119,7 +119,7 @@ export default function TeamSettingsPage() {
       setTimeout(() => setEmailStatus(""), 5000);
     } else {
       setEmailStatus("");
-      setError("Failed to invite member. Make sure you are an admin. Check browser console (F12) for details.");
+      setError("Failed to invite member. Make sure you are an admin of this workspace.");
     }
   }
 

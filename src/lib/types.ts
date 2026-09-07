@@ -245,6 +245,10 @@ export interface Candidate {
   tags: CandidateTag[];
   status: ScreeningStatus;
   createdAt: string;
+  /** Set when the candidate applied via the public apply link. */
+  applicantName?: string;
+  applicantEmail?: string;
+  applicantPhone?: string;
 }
 
 export interface ScreeningRecord {

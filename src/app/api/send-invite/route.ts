@@ -9,13 +9,38 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const recentRequests: { key: string; at: number }[] = [];
+const RATE_LIMIT = 5;
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  while (recentRequests.length && now - recentRequests[0].at > RATE_WINDOW_MS) recentRequests.shift();
+  const count = recentRequests.filter((r) => r.key === key).length;
+  if (count >= RATE_LIMIT) return true;
+  recentRequests.push({ key, at: now });
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    if (isRateLimited(ip)) {
+      return NextResponse.json({ error: "Too many invite emails. Please try again later." }, { status: 429 });
+    }
+
     const { email, workspaceName, inviterName, role } = await request.json();
 
     if (!email || !workspaceName || !inviterName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+    if (!EMAIL_RE.test(String(email))) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+    }
+    const safeRole = ["admin", "recruiter", "viewer"].includes(String(role)) ? String(role) : "recruiter";
+    const safeWorkspaceName = String(workspaceName).slice(0, 80);
+    const safeInviterName = String(inviterName).slice(0, 60);
 
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       return NextResponse.json({ error: "Email not configured" }, { status: 503 });
@@ -25,8 +50,8 @@ export async function POST(request: NextRequest) {
 
     const info = await transporter.sendMail({
       from: `"HireLens AI" <${process.env.GMAIL_USER}>`,
-      to: email,
-      subject: `${inviterName} invited you to "${workspaceName}" on HireLens AI`,
+      to: String(email),
+      subject: `${safeInviterName} invited you to "${safeWorkspaceName}" on HireLens AI`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -45,7 +70,7 @@ export async function POST(request: NextRequest) {
             <div style="padding:32px;">
               <h2 style="color:#0f172a;font-size:20px;margin:0 0 12px;">You've been invited!</h2>
               <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 20px;">
-                <strong>${inviterName}</strong> invited you to join <strong>"${workspaceName}"</strong> as a <strong>${role}</strong>.
+                <strong>${safeInviterName}</strong> invited you to join <strong>"${safeWorkspaceName}"</strong> as a <strong>${safeRole}</strong>.
               </p>
               <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
                 Sign in to HireLens AI and accept the invite from your Team Settings page.

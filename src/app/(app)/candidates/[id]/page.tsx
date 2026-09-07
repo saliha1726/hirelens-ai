@@ -8,10 +8,12 @@ import {
   Building2,
   CalendarDays,
   FileText,
+  Globe,
   GraduationCap,
   MapPin,
   Mail,
   Award,
+  Phone,
   Printer,
   Trash2,
 } from "lucide-react";
@@ -75,10 +77,15 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
               {initialsOf(r.name ?? candidate.fileName)}
             </span>
             <div className="pb-1">
-              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{r.name ?? "Unnamed candidate"}</h1>
+              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+                {r.name ?? candidate.applicantName ?? "Unnamed candidate"}
+              </h1>
               <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                {r.email && (
-                  <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.email}</span>
+                {(r.email || candidate.applicantEmail) && (
+                  <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.email ?? candidate.applicantEmail}</span>
+                )}
+                {candidate.applicantPhone && (
+                  <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {candidate.applicantPhone}</span>
                 )}
                 {r.location && (
                   <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {r.location}</span>
@@ -89,6 +96,11 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
                 <span className="capitalize">{r.seniority ?? "mid"} level</span>
                 {candidate.fileName && (
                   <span className="inline-flex items-center gap-1"><FileText className="h-3 w-3" /> {candidate.fileName}</span>
+                )}
+                {candidate.tags.some((t) => t.name === "Applied Online") && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 font-medium text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
+                    <Globe className="h-3 w-3" /> Applied online
+                  </span>
                 )}
               </div>
             </div>

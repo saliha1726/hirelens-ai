@@ -196,7 +196,7 @@ const STEPS = [
   {
     icon: BrainCircuit,
     title: "Read AI insights — then decide",
-    body: "Gemini adds balanced interpretation: summary, concerns and interview focus. Scores never change. You stay the decision-maker.",
+    body: "AI adds balanced interpretation: summary, concerns and interview focus. Scores never change. You stay the decision-maker.",
   },
 ];
 
@@ -315,7 +315,7 @@ const FEATURES = [
   { icon: ListChecks, title: "Requirement extraction", body: "Required/preferred split, minimum years, degree bar, certifications, seniority target — parsed automatically." },
   { icon: FileSearch, title: "Deep resume parsing", body: "Skills taxonomy with alias handling (\"reactjs\" = React), work timelines, education, certifications, domains." },
   { icon: GitCompareArrows, title: "Candidate comparison", body: "Put finalists side-by-side and compare factor-by-factor before deciding who advances." },
-  { icon: BrainCircuit, title: "Gemini-powered insights", body: "Balanced AI summaries, concerns and interview focus areas — clearly separated from deterministic scoring." },
+  { icon: BrainCircuit, title: "AI-powered insights", body: "Balanced AI summaries, concerns and interview focus areas — clearly separated from deterministic scoring." },
   { icon: ShieldCheck, title: "Privacy-first design", body: "Server-side-only API keys, protected characteristics excluded, resume content treated as untrusted data." },
 ] as const;
 

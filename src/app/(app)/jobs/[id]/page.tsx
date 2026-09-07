@@ -2,7 +2,7 @@
 
 import { use, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Briefcase, GraduationCap, Award, Gauge, Download, Users, TrendingUp, SlidersHorizontal, RotateCcw, ChevronDown, Link2, Check } from "lucide-react";
+import { ArrowLeft, Briefcase, GraduationCap, Award, Gauge, Download, Users, TrendingUp, SlidersHorizontal, RotateCcw, ChevronDown, Link2, Check, LayoutGrid } from "lucide-react";
 import { motion } from "framer-motion";
 import { useWorkspace, saveJob, getActiveWorkspaceId } from "@/lib/client/store";
 import { Badge, Button, ButtonLink, Card, CardContent, EmptyState } from "@/components/ui/primitives";
@@ -54,6 +54,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   }, [ranked]);
 
   const [copied, setCopied] = useState(false);
+  const [copiedBoard, setCopiedBoard] = useState(false);
   const copyLink = useCallback(() => {
     const wsId = getActiveWorkspaceId();
     if (!wsId || !job) return;
@@ -63,6 +64,16 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
       setTimeout(() => setCopied(false), 2000);
     });
   }, [job]);
+
+  const copyBoardLink = useCallback(() => {
+    const wsId = getActiveWorkspaceId();
+    if (!wsId) return;
+    const url = `${window.location.origin}/jobs-board?ws=${wsId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedBoard(true);
+      setTimeout(() => setCopiedBoard(false), 2000);
+    });
+  }, []);
 
   if (!job) {
     return (
@@ -95,6 +106,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
           )}
           <Button variant="outline" size="sm" onClick={copyLink}>
             {copied ? <><Check className="h-4 w-4" /> Copied!</> : <><Link2 className="h-4 w-4" /> Copy apply link</>}
+          </Button>
+          <Button variant="outline" size="sm" onClick={copyBoardLink}>
+            {copiedBoard ? <><Check className="h-4 w-4" /> Copied!</> : <><LayoutGrid className="h-4 w-4" /> Share job board</>}
           </Button>
           <ButtonLink href="/screen">Screen candidates for this job</ButtonLink>
         </div>

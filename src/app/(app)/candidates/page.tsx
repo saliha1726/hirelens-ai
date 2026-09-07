@@ -189,7 +189,9 @@ export default function CandidatesPage() {
           </select>
           <button
             onClick={() => {
-              const tag: CandidateTag = { id: crypto.randomUUID(), name: "Bulk Tag", color: "#f43f5e" };
+              const name = window.prompt("Tag name to add to all selected candidates:");
+              if (!name?.trim()) return;
+              const tag: CandidateTag = { id: crypto.randomUUID(), name: name.trim(), color: "#f43f5e" };
               bulkAddTag(selected, tag);
               setSelected([]);
             }}
