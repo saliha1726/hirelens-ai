@@ -284,7 +284,7 @@ try:
 
         mongo_client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
         mongo_client.admin.command("ping")  # fail fast if unreachable
-        print(f"[ml-service] MongoDB connected → db '{MONGO_DB_NAME}'")
+        print(f"[ml-service] MongoDB connected to database '{MONGO_DB_NAME}'")
 except Exception as e:
     print(f"[ml-service] MongoDB unavailable ({e.__class__.__name__}); logging disabled")
     mongo_client = None

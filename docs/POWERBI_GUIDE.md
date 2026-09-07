@@ -4,13 +4,21 @@ This guide shows how to build the **required Power BI report** from HireLens AI 
 
 ---
 
-## Step 1 — Export data from HireLens AI
+## Step 1 — Get data
+
+**Option A — Use the ready-made sample dataset (fastest):**
+
+A realistic 120-candidate dataset ships with the repo: **`powerbi-sample-data.csv`** (same columns as the app's export). Use it to build and screenshot your report in minutes.
+
+**Option B — Export real data from the app:**
 
 1. Open the app → **Candidates** page → click **Export CSV**
    (or open a specific job → **Export CSV** for that job's candidates)
 2. Save the file, e.g. `hirelens-candidates.csv`
 
-The CSV contains per candidate: `Name, Email, Phone, Status, Best Match %, Job Title, Matched Skills Count, Required Skills Count, Missing Skills, Years Experience, Seniority, Tags, Notes Count, Interviews Count, Source, Created At`.
+Both files contain per candidate: `Name, Email, Phone, Status, Best Match %, Job Title, Matched Skills Count, Required Skills Count, Missing Skills, Years Experience, Seniority, Tags, Notes Count, Interviews Count, Source, Created At`.
+
+(You can regenerate the sample with different data: `python scripts/generate_sample_csv.py`)
 
 ## Step 2 — Import into Power BI Desktop
 

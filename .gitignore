@@ -44,3 +44,5 @@ yarn-error.log*
 __pycache__/
 *.pyc
 .venv/
+ml-service/ml-out.log
+ml-service/ml-err.log
