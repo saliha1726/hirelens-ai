@@ -1,35 +1,55 @@
 /**
  * Server-side AI client for recruitment insights.
  *
- * Provider: MiMo (OpenAI-compatible /chat/completions API).
+ * Provider: Google Gemini (OpenAI-compatible endpoint) with optional MiMo fallback.
  * API key NEVER leaves the server.
  * Resume/JD content is passed as delimited, untrusted DATA.
  * Graceful degradation: callers handle failure; features clearly
  * report unavailability instead of breaking the product.
  */
 
-const DEFAULT_MODEL = process.env.MIMO_MODEL || "mimo";
-const FALLBACK_MODELS = (process.env.MIMO_FALLBACK_MODELS || "").split(",").filter(Boolean);
-const BASE_URL = process.env.MIMO_BASE_URL || "https://api.mimo.ai/v1";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const GEMINI_KEY = process.env.GEMINI_API_KEY;
+const MIMO_MODEL = process.env.MIMO_MODEL || "mimo";
+const MIMO_KEY = process.env.MIMO_API_KEY;
+const MIMO_FALLBACK_MODELS = (process.env.MIMO_FALLBACK_MODELS || "").split(",").filter(Boolean);
 const TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 2;
 
-export type AIProvider = "mimo";
+export type AIProvider = "gemini" | "mimo";
 
 export function isAIEnabled(): boolean {
-  return Boolean(process.env.MIMO_API_KEY);
+  return Boolean(GEMINI_KEY || MIMO_KEY);
 }
 
 export function getAIProvider(): AIProvider | null {
-  return isAIEnabled() ? "mimo" : null;
+  if (GEMINI_KEY) return "gemini";
+  if (MIMO_KEY) return "mimo";
+  return null;
 }
 
-function getApiKey(): string | undefined {
-  return process.env.MIMO_API_KEY;
-}
-
-function getBaseUrl(): string {
-  return process.env.MIMO_BASE_URL || "https://api.mimo.ai/v1";
+/** Model candidates in priority order. */
+function getModelChain(): Array<{ model: string; apiKey: string; baseUrl: string; jsonMode: boolean }> {
+  const chain: Array<{ model: string; apiKey: string; baseUrl: string; jsonMode: boolean }> = [];
+  if (GEMINI_KEY) {
+    chain.push({
+      model: GEMINI_MODEL,
+      apiKey: GEMINI_KEY,
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+      jsonMode: true,
+    });
+  }
+  if (MIMO_KEY) {
+    for (const m of [MIMO_MODEL, ...MIMO_FALLBACK_MODELS.filter((x) => x !== MIMO_MODEL)]) {
+      chain.push({
+        model: m,
+        apiKey: MIMO_KEY,
+        baseUrl: process.env.MIMO_BASE_URL || "https://api.mimo.ai/v1",
+        jsonMode: true,
+      });
+    }
+  }
+  return chain;
 }
 
 export class AIError extends Error {
@@ -55,26 +75,24 @@ interface MiMoResponse {
 }
 
 async function callModel(
-  model: string,
-  apiKey: string,
+  target: { model: string; apiKey: string; baseUrl: string; jsonMode: boolean },
   messages: ChatMessage[],
 ): Promise<string> {
-  const baseUrl = getBaseUrl();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
+    const res = await fetch(`${target.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${target.apiKey}`,
       },
       body: JSON.stringify({
-        model,
+        model: target.model,
         messages,
         temperature: 0.25,
         max_tokens: 2048,
-        response_format: { type: "json_object" },
+        ...(target.jsonMode ? { response_format: { type: "json_object" } } : {}),
       }),
       signal: controller.signal,
     });
@@ -134,10 +152,9 @@ export async function generateStructured<T>(params: {
   temperature?: number;
   maxTokens?: number;
 }): Promise<{ data: T; modelUsed: string }> {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new AIError("AI API key is not configured");
+  const chain = getModelChain();
+  if (chain.length === 0) throw new AIError("AI API key is not configured");
 
-  const models = [DEFAULT_MODEL, ...FALLBACK_MODELS.filter((m) => m !== DEFAULT_MODEL)];
   let lastError: unknown;
 
   const messages: ChatMessage[] = [
@@ -145,11 +162,11 @@ export async function generateStructured<T>(params: {
     { role: "user", content: params.userContent },
   ];
 
-  for (const model of models) {
+  for (const target of chain) {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const raw = await callModel(model, apiKey, messages);
-        return { data: extractJSON<T>(raw), modelUsed: model };
+        const raw = await callModel(target, messages);
+        return { data: extractJSON<T>(raw), modelUsed: target.model };
       } catch (err) {
         lastError = err;
         const status = err instanceof AIError ? err.status : undefined;

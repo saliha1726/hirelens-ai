@@ -28,6 +28,7 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { ShortcutsGuide } from "@/components/ui/shortcuts-guide";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
+import { AIChat } from "@/components/ai/ai-chat";
 import { useUser } from "@/lib/hooks/use-user";
 import { useRole } from "@/lib/hooks/use-role";
 import type { WorkspaceRole } from "@/lib/types";
@@ -298,6 +299,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <CommandPalette />
       <ShortcutsGuide />
       <MobileBottomNav />
+      <AIChat />
     </div>
   );
 }
