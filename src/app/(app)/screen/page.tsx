@@ -36,6 +36,10 @@ interface ResultEntry {
     predicted_band: string;
     confidence: number;
     probabilities: Record<string, number>;
+    nn_band?: string;
+    nn_confidence?: number;
+    nn_probabilities?: Record<string, number>;
+    models_agree?: boolean;
   };
   error?: string;
 }
@@ -361,7 +365,7 @@ function ResultCard({
                       <Brain className="h-4 w-4" /> ML analysis — Scikit-learn
                     </h4>
                     <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                      Second opinion from the Python microservice (TF-IDF + RandomForest). Independent of the deterministic score.
+                      Second opinion from the Python microservice (TF-IDF + RandomForest{entry.mlScore.nn_band ? " + TensorFlow NN" : ""}). Independent of the deterministic score.
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       <div>
@@ -371,8 +375,21 @@ function ResultCard({
                       <div className="h-8 w-px bg-slate-200 dark:bg-slate-700" />
                       <div>
                         <p className="text-sm font-semibold capitalize text-cyan-700 dark:text-cyan-300">{entry.mlScore.predicted_band} match</p>
-                        <p className="text-[10px] text-slate-400">{Math.round(entry.mlScore.confidence * 100)}% classifier confidence</p>
+                        <p className="text-[10px] text-slate-400">{Math.round(entry.mlScore.confidence * 100)}% RandomForest confidence</p>
                       </div>
+                      {entry.mlScore.nn_band && (
+                        <>
+                          <div className="h-8 w-px bg-slate-200 dark:bg-slate-700" />
+                          <div>
+                            <p className="text-sm font-semibold capitalize text-cyan-700 dark:text-cyan-300">{entry.mlScore.nn_band} (NN)</p>
+                            <p className="text-[10px] text-slate-400">
+                              {Math.round((entry.mlScore.nn_confidence ?? 0) * 100)}% TensorFlow confidence
+                              {entry.mlScore.models_agree === true && " · ✓ models agree"}
+                              {entry.mlScore.models_agree === false && " · ⚠ models differ"}
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </div>
                     {entry.mlScore.top_terms.length > 0 && (
                       <div className="mt-3">

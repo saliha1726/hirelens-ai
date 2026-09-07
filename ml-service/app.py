@@ -23,8 +23,10 @@ Run:
 """
 from __future__ import annotations
 
+import os
 import re
 import string
+from datetime import datetime, timezone
 
 from flask import Flask, jsonify, request
 from sklearn.ensemble import RandomForestClassifier
@@ -171,7 +173,6 @@ def overlap_features(jd_text: str, resume_texts: list[str]) -> list[list[float]]
 
 # Train the Random Forest once at startup
 JD_TEXTS, RESUME_TEXTS, LABELS = make_training_data()
-X_train = overlap_features(" ".join(JD_TEXTS[:1]), RESUME_TEXTS)  # placeholder, replaced below
 _X = []
 for jd, r in zip(JD_TEXTS, RESUME_TEXTS):
     f = overlap_features(jd, [r])[0]
@@ -202,6 +203,63 @@ def predict_band(jd_text: str, resume_texts: list[str]) -> list[dict]:
     return out
 
 
+# ────────────────────────── Model 3: TensorFlow Keras ────────────────────────
+# A small neural network trained on the same synthetic pairs. Serves as a
+# third model whose predictions are compared against the Random Forest.
+
+_TF_AVAILABLE = False
+try:
+    import numpy as np
+
+    # Silence TensorFlow's startup log spam BEFORE importing it
+    os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+    os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+    import tensorflow as tf
+
+    tf.get_logger().setLevel("ERROR")
+
+    def build_keras_model() -> "tf.keras.Model":
+        model = tf.keras.Sequential([
+            tf.keras.layers.Input(shape=(5,)),
+            tf.keras.layers.Dense(16, activation="relu", name="hidden_1"),
+            tf.keras.layers.Dense(8, activation="relu", name="hidden_2"),
+            tf.keras.layers.Dense(4, activation="softmax", name="band_output"),
+        ])
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy"],
+        )
+        return model
+
+    keras_model = build_keras_model()
+    X_arr = np.array(_X, dtype="float32")
+    y_arr = np.array(LABELS, dtype="int32")
+    keras_model.fit(X_arr, y_arr, epochs=40, batch_size=64, verbose=0)
+    _TF_AVAILABLE = True
+except Exception:  # TensorFlow optional — service still runs without it
+    _TF_AVAILABLE = False
+
+
+def predict_band_nn(jd_text: str, resume_texts: list[str]) -> list[dict] | None:
+    """Neural-network match-band prediction. None if TensorFlow unavailable."""
+    if not _TF_AVAILABLE:
+        return None
+    feats = np.array(overlap_features(jd_text, resume_texts), dtype="float32")
+    probs = keras_model.predict(feats, verbose=0)
+    preds = probs.argmax(axis=1)
+    out = []
+    for i, p in enumerate(preds):
+        out.append({
+            "band": BAND_NAMES[int(p)],
+            "confidence": round(float(probs[i][p]), 3),
+            "probabilities": {
+                BAND_NAMES[j]: round(float(probs[i][j]), 3) for j in range(4)
+            },
+        })
+    return out
+
+
 # Feature importances for explainability reports
 FEATURE_IMPORTANCE = {
     name: round(float(w), 4)
@@ -212,6 +270,54 @@ FEATURE_IMPORTANCE = {
 }
 
 
+# ─────────────────────────── MongoDB logging (optional) ──────────────────────
+# Every screening request is logged to MongoDB Atlas when MONGO_URI is set.
+# The app works identically without it.
+
+MONGO_URI = os.environ.get("MONGO_URI", "")
+MONGO_DB_NAME = os.environ.get("MONGO_DB_NAME", "hirelens")
+
+mongo_client = None
+try:
+    if MONGO_URI:
+        import pymongo
+
+        mongo_client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+        mongo_client.admin.command("ping")  # fail fast if unreachable
+        print(f"[ml-service] MongoDB connected → db '{MONGO_DB_NAME}'")
+except Exception as e:
+    print(f"[ml-service] MongoDB unavailable ({e.__class__.__name__}); logging disabled")
+    mongo_client = None
+
+
+def log_screening_to_mongo(jd_text: str, results: list[dict]) -> None:
+    """Best-effort audit log of each screening run. Never raises."""
+    if mongo_client is None:
+        return
+    try:
+        db = mongo_client[MONGO_DB_NAME]
+        collection = db["screenings"]
+        doc = {
+            "timestamp": datetime.now(timezone.utc),
+            "jd_length": len(jd_text),
+            "jd_preview": jd_text[:200],
+            "candidates": [
+                {
+                    "index": r["index"],
+                    "tfidf_similarity": r["tfidf_similarity"],
+                    "score": r["score"],
+                    "predicted_band": r["predicted_band"],
+                    "nn_band": r.get("nn_band"),
+                    "top_terms": [t["term"] for t in r["top_terms"][:5]],
+                }
+                for r in results
+            ],
+        }
+        collection.insert_one(doc)
+    except Exception:
+        pass  # logging must never break scoring
+
+
 # ───────────────────────────────── Endpoints ────────────────────────────────
 
 @app.get("/api/health")
@@ -219,7 +325,8 @@ def health():
     return jsonify({
         "ok": True,
         "service": "hirelens-ml",
-        "models": ["tfidf-cosine", "random-forest"],
+        "models": ["tfidf-cosine", "random-forest"] + (["tensorflow-keras"] if _TF_AVAILABLE else []),
+        "database": "mongodb" if mongo_client else "none",
         "feature_importance": FEATURE_IMPORTANCE,
     })
 
@@ -241,10 +348,11 @@ def score():
 
     sims = tfidf_similarity(jd_text, resume_texts)
     bands = predict_band(jd_text, resume_texts)
+    nn_bands = predict_band_nn(jd_text, resume_texts)
 
     results = []
     for i in range(len(resume_texts)):
-        results.append({
+        entry = {
             "index": i,
             "tfidf_similarity": sims[i]["similarity"],
             "score": sims[i]["score"],
@@ -252,12 +360,21 @@ def score():
             "predicted_band": bands[i]["band"],
             "confidence": bands[i]["confidence"],
             "probabilities": bands[i]["probabilities"],
-        })
+        }
+        if nn_bands is not None:
+            entry["nn_band"] = nn_bands[i]["band"]
+            entry["nn_confidence"] = nn_bands[i]["confidence"]
+            entry["nn_probabilities"] = nn_bands[i]["probabilities"]
+            entry["models_agree"] = nn_bands[i]["band"] == bands[i]["band"]
+        results.append(entry)
     # Rank by score descending
     results.sort(key=lambda r: r["score"], reverse=True)
+
+    log_screening_to_mongo(jd_text, results)
+
     return jsonify({
         "ok": True,
-        "engine": "scikit-learn",
+        "engine": "scikit-learn + tensorflow",
         "results": results,
         "feature_importance": FEATURE_IMPORTANCE,
     })

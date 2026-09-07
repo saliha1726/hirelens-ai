@@ -21,7 +21,7 @@ HireLens AI is a full-stack, cloud-deployed recruitment decision-support system.
 | **Frontend: Bootstrap** | Tailwind CSS v3 | Bootstrap and Tailwind serve the identical purpose: a CSS framework for responsive, consistent UI. Tailwind was chosen because it is the current industry standard (used by Netflix, GitHub, Shopify) and allows full design customization instead of Bootstrap's fixed component styles. The learning outcome — *using a CSS framework to build responsive interfaces* — is fully achieved. |
 | **Backend: Python (Flask/Django), Java (Spring Boot), or PHP** | Next.js 15 API Routes (Node.js/TypeScript) | **This is the one deliberate deviation.** The backend implements the same concepts taught in Flask/Django/Spring: REST API endpoints, request validation, file parsing, business logic, rate limiting, authentication (session cookies), and email services. TypeScript was chosen because it allows **one language across the full stack**, shared type definitions between client and server (a software-engineering best practice), and type-safe code. The architectural skills — API design, input validation, layering, error handling — are identical regardless of language. |
 | **Database: MySQL or MongoDB** | Google Firestore (NoSQL document database) | Firestore is in the **same category as MongoDB**: a NoSQL document store with collections and JSON-like documents. The project demonstrates the same data-modeling skills — document design, subcollections (`workspaces/{id}/jobs`, `/candidates`, `/members`), real-time listeners, and security rules (the Firestore equivalent of SQL permissions). Firestore additionally provides real-time sync across devices/tabs, which is the reason it was selected over MongoDB Atlas. |
-| **AI/ML: Python, Scikit-learn, TensorFlow** | **Python 3 + Flask + Scikit-learn microservice** + custom scoring engine + MiMo LLM API | The project includes a **Python/Flask microservice (`ml-service/`)** using **Scikit-learn**: a TF-IDF vectorizer with cosine similarity computes resume↔JD textual match scores, and a **RandomForest classifier** (200 trees, trained on 6,000 synthetic labeled pairs) predicts match bands with confidence scores. Its results appear in the screening UI alongside the deterministic engine, and the service includes its own Python unit tests (`ml-service/test_app.py`). Additionally, a custom deterministic engine implements NLP/IR techniques — document text extraction, tokenization, skill-taxonomy canonicalization, weighted scoring — and an LLM layer provides qualitative summaries with prompt-injection defenses. |
+| **AI/ML: Python, Scikit-learn, TensorFlow** | **Python 3 + Flask microservice using Scikit-learn AND TensorFlow** + custom scoring engine + MiMo LLM API | The project includes a **Python/Flask microservice (`ml-service/`)** using **Scikit-learn** (TF-IDF vectorizer, cosine similarity, RandomForest classifier — 200 trees trained on 6,000 synthetic pairs) **and TensorFlow** (a Keras neural network with a 16-8-4 softmax architecture providing a third model opinion with agreement indicators). All three ML models run per screening, shown together in the UI, and compared for consensus. **MongoDB Atlas** integration logs every screening run (optional `MONGO_URI`). The service includes its own Python unit tests (`ml-service/test_app.py` — 6 tests, all passing). Additionally, a custom deterministic engine implements NLP/IR techniques and an LLM layer provides qualitative summaries with prompt-injection defenses. |
 | **Visualization: Power BI or Tableau** | Interactive web analytics dashboard | The Analytics page delivers the same learning outcome natively in the app: score distributions, funnel conversion rates between pipeline stages, skill-gap analysis (met vs. missing), per-job performance comparisons, and a 14-day activity timeline — all interactive and updating in real time from the database, which a static Power BI export cannot do. An in-app dashboard was chosen so visuals ship with the deployed product rather than in an external tool. |
 
 ---
@@ -47,14 +47,17 @@ HireLens AI is a full-stack, cloud-deployed recruitment decision-support system.
 
 ---
 
-## 5. Delivered Python & Power BI Components
+## 5. Delivered Python, TensorFlow & Power BI Components
 
 The project now includes concrete deliverables on the recommended stack:
 
-1. **Python + Flask + Scikit-learn microservice** (`ml-service/app.py`)
+1. **Python + Flask + Scikit-learn + TensorFlow microservice** (`ml-service/app.py`)
    - TF-IDF vectorization + cosine similarity scoring (information retrieval)
    - RandomForest classifier trained on 6,000 synthetic resume↔JD pairs
+   - TensorFlow Keras neural network (16→8→4 softmax) as a third model
+   - Cross-model agreement indicator shown in the UI
    - Feature engineering: Jaccard similarity, overlap ratios, shared-term counts
    - Model explainability: top shared terms + feature importances exposed via API
-   - 4 Python unit tests (`ml-service/test_app.py`) — all passing
+   - **MongoDB Atlas** logging of every screening (`MONGO_URI` env var)
+   - 6 Python unit tests (`ml-service/test_app.py`) — all passing
 2. **Power BI report** — built from the app's CSV export following `docs/POWERBI_GUIDE.md`: pipeline funnel, score distribution, skill-gap analysis, average score per job, with interactive slicers.

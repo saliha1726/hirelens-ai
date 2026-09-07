@@ -15,7 +15,7 @@ HireLens AI is a decision-support assistant for recruiters: upload resumes again
 - **Structured resume parsing** — contact info, skills, experience timeline, education, certifications, seniority & industry domains extracted deterministically
 - **Job requirement extraction** — required vs. preferred skills, minimum years, education bar, certifications, seniority target and salient keywords from raw JD text
 - **AI interpretation (MiMo)** — balanced summaries, strengths, concerns and interview focus areas. The AI **never changes scores**; it only interprets the already-computed result
-- **ML second opinion (Python + Scikit-learn)** — a Flask microservice (`ml-service/`) scores every resume with TF-IDF + cosine similarity and a RandomForest match-band classifier, shown alongside the deterministic score for comparison. Runs independently and never blocks screening when offline
+- **ML second opinion (Python + Scikit-learn + TensorFlow)** — a Flask microservice (`ml-service/`) scores every resume with TF-IDF + cosine similarity, a RandomForest match-band classifier, **and a TensorFlow Keras neural network** — all three shown together with agreement indicators. Every screening can be logged to **MongoDB Atlas** (set `MONGO_URI`). Runs independently and never blocks screening when offline
 - **Cloud sync (Firestore)** — every job, candidate, note, interview, offer and onboarding task persists to Firestore with real-time listeners; works across devices and tabs
 - **Team workspaces** — invite members by email (admin/recruiter/viewer roles), role-gated UI, workspace switcher
 - **Public job board + apply links** — share a public board (`/jobs-board?ws=…`), let candidates apply online (`/apply/{ws}/{job}`) with automatic resume parsing & scoring; admins get email notifications on each application
@@ -32,7 +32,7 @@ HireLens AI is a decision-support assistant for recruiters: upload resumes again
 | Animation | Framer Motion |
 | Auth & DB | Firebase Auth (email + Google) · Firestore |
 | AI | MiMo (OpenAI-compatible REST API, server-side only) |
-| **ML microservice** | **Python 3 + Flask + Scikit-learn (TF-IDF, cosine similarity, RandomForest)** |
+| **ML microservice** | **Python 3 + Flask + Scikit-learn (TF-IDF, cosine similarity, RandomForest) + TensorFlow (Keras neural network) + MongoDB logging** |
 | Email | Nodemailer via Gmail SMTP (invites, application alerts) |
 | Document parsing | `unpdf` (PDF), `mammoth` (DOCX) |
 | Validation | Zod + custom file/magic-byte validation |
@@ -64,6 +64,7 @@ npm run check       # all of the above
 | `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | Yes (server APIs) | Firebase Admin SDK service account for public apply/jobs endpoints |
 | `MIMO_API_KEY` | Optional* | Enables AI summaries/insights via the MiMo OpenAI-compatible API |
 | `ML_SERVICE_URL` | Optional* | URL of the Python/Scikit-learn microservice (e.g. `http://127.0.0.1:5001`). Enables ML analysis in screening results |
+| `MONGO_URI` | Optional (ML service) | MongoDB Atlas connection string — the microservice logs every screening to the `screenings` collection |
 | `GMAIL_USER` / `GMAIL_APP_PASSWORD` | Optional* | Gmail SMTP for team invites & application notifications |
 | `NEXT_PUBLIC_APP_URL` | No | Public URL used in email links |
 
@@ -87,10 +88,12 @@ Client store (lib/client/store.ts)
   ├─ Real-time onSnapshot listeners → cross-tab/device sync
   └─ Public flow: /api/apply (Admin SDK) → candidate + activity + admin email alert
 
-ML microservice (ml-service/ — Python, Flask, Scikit-learn)
+ML microservice (ml-service/ — Python, Flask, Scikit-learn, TensorFlow, MongoDB)
   ├─ TF-IDF vectorizer + cosine similarity → textual match score 0–100
   ├─ RandomForest classifier (200 trees) → match band + confidence
+  ├─ TensorFlow Keras neural network (16-8-4, softmax) → third opinion
   ├─ Trained at startup on 6,000 synthetic resume↔JD pairs
+  ├─ MongoDB Atlas logging of every screening (optional, MONGO_URI)
   └─ POST /api/score — called by /api/screen as an optional second opinion
 ```
 

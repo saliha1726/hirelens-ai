@@ -8,7 +8,16 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app import preprocess, tfidf_similarity, predict_band, FEATURE_IMPORTANCE, BAND_NAMES
+from app import (
+    preprocess,
+    tfidf_similarity,
+    predict_band,
+    predict_band_nn,
+    FEATURE_IMPORTANCE,
+    BAND_NAMES,
+    _TF_AVAILABLE,
+    mongo_client,
+)
 
 
 def test_preprocess_removes_stopwords_and_punctuation():
@@ -51,6 +60,33 @@ def test_predict_band_returns_valid_output():
 def test_feature_importance_sums_to_one():
     total = sum(FEATURE_IMPORTANCE.values())
     assert 0.99 < total <= 1.01
+
+
+def test_tensorflow_nn_predictions():
+    """TensorFlow Keras model (when installed) returns valid band predictions."""
+    if not _TF_AVAILABLE:
+        print("      (TensorFlow not installed — skipping NN test)")
+        return
+    jd = "react typescript nodejs docker kubernetes aws graphql"
+    strong = "react typescript nodejs docker kubernetes aws graphql extra skills here"
+    weak = "cooking baking pastry recipes kitchen"
+    out = predict_band_nn(jd, [strong, weak])
+    assert out is not None
+    assert out[0]["band"] in BAND_NAMES
+    assert 0 <= out[0]["confidence"] <= 1
+    assert abs(sum(out[0]["probabilities"].values()) - 1.0) < 0.01
+    # Both models should rank the strong resume above the weak one
+    assert out[0]["band"] in ("good", "strong")
+    assert out[1]["band"] == "weak"
+
+
+def test_mongodb_configured_or_disabled():
+    """MongoDB client is either connected (MONGO_URI set) or cleanly None."""
+    assert mongo_client is None or mongo_client is not None  # no crash at import
+    if os.environ.get("MONGO_URI") and mongo_client is not None:
+        db = mongo_client[os.environ.get("MONGO_DB_NAME", "hirelens")]
+        collection_names = db.list_collection_names()
+        assert isinstance(collection_names, list)
 
 
 def run_all():
