@@ -1,0 +1,24 @@
+
+> hirelens-ai@1.0.0 dev
+> node scripts/build-css.cjs && next dev
+
+
+Rebuilding...
+
+Done in 4465ms.
+tailwind css generated: 77 KB
+   ▲ Next.js 15.5.23
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.102:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 29s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 6.2s (158 modules)
+ ○ Compiling /api/health ...
+ ✓ Compiled /api/health in 11.6s (342 modules)
+ GET /api/health 200 in 314ms
+ ○ Compiling /api/copilot ...
+ ✓ Compiled /api/copilot in 5.5s (355 modules)
+ POST /api/copilot 200 in 24035ms

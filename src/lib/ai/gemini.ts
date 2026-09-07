@@ -169,9 +169,34 @@ export async function generateStructured<T>(params: {
         return { data: extractJSON<T>(raw), modelUsed: target.model };
       } catch (err) {
         lastError = err;
+        console.error(
+          `generateStructured: model=${target.model} jsonMode=${target.jsonMode} attempt=${attempt} failed:`,
+          err instanceof Error ? err.message : err,
+        );
         const status = err instanceof AIError ? err.status : undefined;
-        if (!(status === 429 || (status != null && status >= 500))) break;
+        // Retry on rate limit / server errors AND on JSON-parse failures
+        // (a non-JSON response often means the model ignored the format —
+        // retrying without strict json_mode gives it another chance).
+        const retryable =
+          status === 429 ||
+          (status != null && status >= 500) ||
+          (err instanceof Error && err.message.includes("parse structured"));
+        if (!retryable) break;
         await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+      }
+    }
+    // If all attempts failed with json_mode ON for this target, try once more
+    // with json_mode OFF — some providers reject/choke on response_format.
+    if (target.jsonMode) {
+      try {
+        const raw = await callModel({ ...target, jsonMode: false }, messages);
+        return { data: extractJSON<T>(raw), modelUsed: target.model };
+      } catch (err) {
+        lastError = err;
+        console.error(
+          `generateStructured: fallback without json_mode failed:`,
+          err instanceof Error ? err.message : err,
+        );
       }
     }
   }
