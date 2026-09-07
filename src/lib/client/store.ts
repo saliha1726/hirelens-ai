@@ -223,6 +223,7 @@ function subscribeToFirestore() {
           applicantName: data.applicantName as string | undefined,
           applicantEmail: data.applicantEmail as string | undefined,
           applicantPhone: data.applicantPhone as string | undefined,
+          feedbackToken: data.feedbackToken as string | undefined,
         };
         candMap.set(change.doc.id, candidate);
       }
@@ -356,6 +357,7 @@ async function writeCandidate(candidate: Candidate) {
       applicantName: candidate.applicantName ?? null,
       applicantEmail: candidate.applicantEmail ?? null,
       applicantPhone: candidate.applicantPhone ?? null,
+      feedbackToken: candidate.feedbackToken ?? null,
     });
   } catch (e) {
     console.error("Failed to write candidate to Firestore:", e);

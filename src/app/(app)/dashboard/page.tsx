@@ -9,6 +9,7 @@ import { Card, CardContent, ButtonLink, EmptyState, Skeleton } from "@/component
 import { ScoreRing } from "@/components/ui/score-ring";
 import { CandidateRow } from "@/components/candidate/candidate-card";
 import { DemoDataManager } from "@/components/workspace/demo-banner";
+import { AttentionPanel } from "@/components/dashboard/attention-panel";
 import { timeAgo } from "@/lib/utils";
 import { StaggerContainer, StaggerItem } from "@/components/ui/animations";
 
@@ -90,6 +91,11 @@ export default function DashboardPage() {
             <StaggerItem><StatCard icon={Gauge} label="Average match" value={stats.avg} suffix="%" /></StaggerItem>
             <StaggerItem><StatCard icon={Activity} label="In pipeline" value={stats.shortlisted} hint="shortlisted / interview" /></StaggerItem>
           </StaggerContainer>
+
+          {/* Needs-attention panel: upcoming interviews + stalled candidates */}
+          <div className="mt-6">
+            <AttentionPanel />
+          </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-3">
             {/* Top candidates */}

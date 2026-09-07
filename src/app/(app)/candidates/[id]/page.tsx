@@ -7,6 +7,7 @@ import {
   Briefcase,
   Building2,
   CalendarDays,
+  Check,
   FileText,
   Globe,
   GraduationCap,
@@ -15,10 +16,11 @@ import {
   Award,
   Phone,
   Printer,
+  Share2,
   Trash2,
 } from "lucide-react";
 import type { ScreeningRecord, RecruiterNote, CandidateTag, Offer, OnboardingTask } from "@/lib/types";
-import { useWorkspace, addNote, deleteNote, editNote, toggleNotePin, addTag, removeTag, setStatus, createOffer, updateOffer, deleteOffer, getOfferForCandidate, createOnboardingTask, updateOnboardingTask, deleteOnboardingTask, getOnboardingTasksForCandidate } from "@/lib/client/store";
+import { useWorkspace, addNote, deleteNote, editNote, toggleNotePin, addTag, removeTag, setStatus, createOffer, updateOffer, deleteOffer, getOfferForCandidate, createOnboardingTask, updateOnboardingTask, deleteOnboardingTask, getOnboardingTasksForCandidate, updateCandidate, getActiveWorkspaceId } from "@/lib/client/store";
 import { useRole } from "@/lib/hooks/use-role";
 import { ALL_STATUSES } from "@/lib/client/store";
 import { Button, Card, CardContent, EmptyState } from "@/components/ui/primitives";
@@ -39,11 +41,14 @@ import { CandidateTimeline } from "@/components/candidate/timeline";
 import { ScorecardDisplay } from "@/components/candidate/scorecard";
 import { OfferTracker } from "@/components/candidate/offer-tracker";
 import { OnboardingChecklist } from "@/components/candidate/onboarding-checklist";
+import { CopilotButtons, CopilotPanel, type CopilotResult } from "@/components/ai/copilot";
 
 export default function CandidateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const ws = useWorkspace();
   const { isViewer } = useRole();
+  const [copilot, setCopilot] = useState<CopilotResult | null>(null);
+  const [feedbackCopied, setFeedbackCopied] = useState(false);
   const candidate = ws.candidates.find((c) => c.id === id);
 
   if (!candidate) {
@@ -131,6 +136,45 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Copilot actions + feedback share */}
+      <div className="mt-5">
+        <div className="flex flex-wrap items-start gap-2">
+          <CopilotButtons
+            candidates={[candidate]}
+            compact
+            onResult={(r) => setCopilot(r)}
+          />
+          {!isViewer && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const wsId = getActiveWorkspaceId();
+                if (!wsId) return;
+                const token = candidate.feedbackToken ?? crypto.randomUUID();
+                if (!candidate.feedbackToken) {
+                  updateCandidate({ ...candidate, feedbackToken: token });
+                }
+                const url = `${window.location.origin}/feedback/${wsId}/${candidate.id}?token=${token}`;
+                await navigator.clipboard.writeText(url);
+                setFeedbackCopied(true);
+                setTimeout(() => setFeedbackCopied(false), 2000);
+              }}
+              className="border-cyan-300 text-cyan-700 hover:bg-cyan-50 dark:border-cyan-500/40 dark:text-cyan-300"
+            >
+              {feedbackCopied ? <><Check className="h-3.5 w-3.5" /> Link copied!</> : <><Share2 className="h-3.5 w-3.5" /> Share feedback link</>}
+            </Button>
+          )}
+        </div>
+        {copilot && (
+          <CopilotPanel
+            data={copilot}
+            onClose={() => setCopilot(null)}
+            nameA={candidate.resume.name ?? candidate.applicantName ?? "Candidate"}
+          />
+        )}
+      </div>
 
       {/* Job switcher + detail */}
       {candidate.screenings.length > 0 && <CandidateBody candidateId={candidate.id} screenings={candidate.screenings} readonly={isViewer} />}

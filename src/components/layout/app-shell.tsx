@@ -12,6 +12,7 @@ import {
   GitCompareArrows,
   BarChart3,
   Columns3,
+  FileSearch,
   Menu,
   X,
   Eye,
@@ -39,6 +40,7 @@ import { useRouter } from "next/navigation";
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/screen", label: "AI Screening", icon: ScanSearch },
+  { href: "/jd-analyzer", label: "JD Analyzer", icon: FileSearch },
   { href: "/jobs", label: "Jobs", icon: Briefcase },
   { href: "/candidates", label: "Candidates", icon: Users },
   { href: "/pipeline", label: "Pipeline", icon: Columns3 },

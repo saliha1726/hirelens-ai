@@ -249,6 +249,8 @@ export interface Candidate {
   applicantName?: string;
   applicantEmail?: string;
   applicantPhone?: string;
+  /** Unguessable token for the public candidate feedback portal. */
+  feedbackToken?: string;
 }
 
 export interface ScreeningRecord {

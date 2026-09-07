@@ -1,16 +1,18 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, GitCompareArrows, Users } from "lucide-react";
 import { useWorkspace } from "@/lib/client/store";
 import { ButtonLink, Card, CardContent, EmptyState } from "@/components/ui/primitives";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { scoreTone } from "@/lib/utils";
+import { CopilotButtons, CopilotPanel, type CopilotResult } from "@/components/ai/copilot";
 
 export default function ComparePage({ searchParams }: { searchParams: Promise<{ a?: string; b?: string }> }) {
   const { a, b } = use(searchParams);
   const ws = useWorkspace();
+  const [copilot, setCopilot] = useState<CopilotResult | null>(null);
 
   const ca = ws.candidates.find((c) => c.id === a);
   const cb = ws.candidates.find((c) => c.id === b);
@@ -47,6 +49,18 @@ export default function ComparePage({ searchParams }: { searchParams: Promise<{ 
       <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
         <GitCompareArrows className="h-6 w-6 text-brand-500" /> Candidate comparison
       </h1>
+
+      <div className="mt-4">
+        <CopilotButtons candidates={[ca, cb]} onResult={(r) => setCopilot(r)} />
+        {copilot && (
+          <CopilotPanel
+            data={copilot}
+            onClose={() => setCopilot(null)}
+            nameA={nameOf(ca)}
+            nameB={nameOf(cb)}
+          />
+        )}
+      </div>
 
       {/* Head-to-head */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
