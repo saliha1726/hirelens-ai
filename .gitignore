@@ -46,3 +46,6 @@ __pycache__/
 .venv/
 ml-service/ml-out.log
 ml-service/ml-err.log
+
+dev-log.txt
+~$*
