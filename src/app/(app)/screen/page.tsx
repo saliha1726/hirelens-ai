@@ -28,6 +28,15 @@ interface ResultEntry {
   match?: MatchResult;
   aiInsight?: AIInsight;
   aiError?: string;
+  mlScore?: {
+    index: number;
+    tfidf_similarity: number;
+    score: number;
+    top_terms: { term: string; jd_weight: number; resume_weight: number }[];
+    predicted_band: string;
+    confidence: number;
+    probabilities: Record<string, number>;
+  };
   error?: string;
 }
 
@@ -35,6 +44,7 @@ interface ScreenResponse {
   job: JobRequirements;
   results: ResultEntry[];
   aiEnabled: boolean;
+  mlEnabled?: boolean;
   error?: string;
 }
 
@@ -127,11 +137,12 @@ export default function ScreenPage() {
                     <CircleCheck className="h-4 w-4 text-emerald-500" />
                     {result.job.title}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    {result.job.requiredSkills.length} required skills · {result.job.preferredSkills.length} preferred
-                    {result.job.minYearsExperience != null && ` · ${result.job.minYearsExperience}+ yrs`} ·{" "}
-                    {result.results.filter((r) => r.match).length} candidates scored
-                  </p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                {result.job.requiredSkills.length} required skills · {result.job.preferredSkills.length} preferred
+                {result.job.minYearsExperience != null && ` · ${result.job.minYearsExperience}+ yrs`} ·{" "}
+                {result.results.filter((r) => r.match).length} candidates scored
+                {result.mlEnabled && " · ML analysis (Scikit-learn)"}
+              </p>
                 </div>
                 <div className="flex gap-2">
                   {!savedJob && (
@@ -306,6 +317,9 @@ function ResultCard({
               ) : entry.aiError ? (
                 <Chip warn>AI unavailable</Chip>
               ) : null}
+              {entry.mlScore && (
+                <Chip ml>ML: {Math.round(entry.mlScore.score)}% · {entry.mlScore.predicted_band}</Chip>
+              )}
             </div>
           </div>
           <ChevronDown className={cn("h-4 w-4 shrink-0 text-slate-400 transition-transform duration-300", open && "rotate-180")} />
@@ -341,6 +355,39 @@ function ResultCard({
                   )}
                 </div>
                 <AIInsightCard insight={entry.aiInsight} error={entry.aiError} />
+                {entry.mlScore && (
+                  <div className="rounded-xl border border-cyan-200/70 bg-cyan-50/30 p-4 dark:border-cyan-500/25 dark:bg-cyan-950/20">
+                    <h4 className="flex items-center gap-1.5 text-sm font-semibold text-cyan-800 dark:text-cyan-300">
+                      <Brain className="h-4 w-4" /> ML analysis — Scikit-learn
+                    </h4>
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      Second opinion from the Python microservice (TF-IDF + RandomForest). Independent of the deterministic score.
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <div>
+                        <p className="text-2xl font-bold text-cyan-700 dark:text-cyan-300">{Math.round(entry.mlScore.score)}%</p>
+                        <p className="text-[10px] uppercase tracking-wide text-slate-400">TF-IDF similarity</p>
+                      </div>
+                      <div className="h-8 w-px bg-slate-200 dark:bg-slate-700" />
+                      <div>
+                        <p className="text-sm font-semibold capitalize text-cyan-700 dark:text-cyan-300">{entry.mlScore.predicted_band} match</p>
+                        <p className="text-[10px] text-slate-400">{Math.round(entry.mlScore.confidence * 100)}% classifier confidence</p>
+                      </div>
+                    </div>
+                    {entry.mlScore.top_terms.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Strongest shared terms</p>
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {entry.mlScore.top_terms.slice(0, 8).map((t) => (
+                            <span key={t.term} className="rounded-md bg-cyan-100/70 px-1.5 py-0.5 text-[10px] font-medium text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-300">
+                              {t.term}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div>
                   <h4 className="mb-3 text-sm font-semibold">Evidence from resume</h4>
                   <EvidenceList match={entry.match!} />
@@ -359,7 +406,7 @@ function ResultCard({
   );
 }
 
-function Chip({ children, ok, warn, ai }: { children: React.ReactNode; ok?: boolean; warn?: boolean; ai?: boolean }) {
+function Chip({ children, ok, warn, ai, ml }: { children: React.ReactNode; ok?: boolean; warn?: boolean; ai?: boolean; ml?: boolean }) {
   return (
     <span
       className={cn(
@@ -367,10 +414,12 @@ function Chip({ children, ok, warn, ai }: { children: React.ReactNode; ok?: bool
         ok && "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
         warn && "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
         ai && "bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300",
-        !ok && !warn && !ai && "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+        ml && "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300",
+        !ok && !warn && !ai && !ml && "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
       )}
     >
       {ai && <Brain className="h-3 w-3" />}
+      {ml && <Brain className="h-3 w-3" />}
       {children}
     </span>
   );

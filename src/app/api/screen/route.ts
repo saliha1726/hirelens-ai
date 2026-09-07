@@ -7,6 +7,7 @@ import { parseResume } from "@/lib/parsing/resume-parser";
 import { parseJobDescription } from "@/lib/parsing/jd-parser";
 import { generateCandidateInsight } from "@/lib/ai/insights";
 import { isAIEnabled } from "@/lib/ai/gemini";
+import { isMLEnabled, scoreWithML, type MLScore } from "@/lib/ml/client";
 import {
   MAX_FILES_PER_REQUEST,
   clientKey,
@@ -23,6 +24,8 @@ interface ResultEntry {
   match?: MatchResult;
   aiInsight?: Awaited<ReturnType<typeof generateCandidateInsight>>;
   aiError?: string;
+  mlScore?: MLScore;
+  mlTextIndex?: number;
   error?: string;
 }
 
@@ -113,6 +116,7 @@ export async function POST(req: Request) {
   if (!job.id) job.id = randomUUID();
 
   // ── Extract & score each resume (per-file isolation) ───────────
+  const rawTexts: string[] = [];
   const entries = await mapLimit(files, 4, async (file): Promise<ResultEntry> => {
     const fileName = sanitizeFileName(file.name);
     try {
@@ -125,6 +129,8 @@ export async function POST(req: Request) {
         return { fileName, error: "Could not extract enough readable text from this file." };
       }
 
+      const rawTextIndex = rawTexts.length;
+      rawTexts.push(text);
       const resume = parseResume(text);
       const match = computeMatch(resume, job, text);
 
@@ -140,7 +146,7 @@ export async function POST(req: Request) {
         }
       }
 
-      return { fileName, resume, match, aiInsight, aiError };
+      return { fileName, resume, match, aiInsight, aiError, mlTextIndex: rawTextIndex };
     } catch (err) {
       const reason =
         err instanceof DocumentParseError
@@ -159,6 +165,24 @@ export async function POST(req: Request) {
     );
   }
 
+  // ── ML layer (optional): Python/Scikit-learn second opinion ──────
+  let mlAvailable = false;
+  if (isMLEnabled() && rawTexts.length > 0) {
+    const jdForML = jdText || job.responsibilities?.join(". ") || job.requiredSkills.map((s) => s.name).join(", ");
+    if (jdForML) {
+      const ml = await scoreWithML(jdForML, rawTexts);
+      if (ml) {
+        mlAvailable = true;
+        const byIndex = new Map(ml.results.map((r) => [r.index, r]));
+        for (const e of entries) {
+          if (e.mlTextIndex != null && byIndex.has(e.mlTextIndex)) {
+            e.mlScore = byIndex.get(e.mlTextIndex);
+          }
+        }
+      }
+    }
+  }
+
   // Rank strongest first.
   entries.sort((a, b) => (b.match?.overallScore ?? -1) - (a.match?.overallScore ?? -1));
 
@@ -167,6 +191,7 @@ export async function POST(req: Request) {
     results: entries,
     ranked: true,
     aiEnabled: isAIEnabled(),
+    mlEnabled: mlAvailable,
     processedAt: new Date().toISOString(),
   });
 }
